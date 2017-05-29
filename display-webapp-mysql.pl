@@ -43,7 +43,7 @@ get '/fetch' => sub {
     });
 
     unless ($total->[0]) {
-        $self->stash( titles => [], pager => $pager, total => 'No' );
+        $self->stash( titles => [], pager => $pager, total => 'No', per => $per, curr => $curr );
         $self->render( template => 'results' );
         return;
     }
@@ -97,7 +97,7 @@ get '/fetch' => sub {
         ;
     }
 
-    $self->stash( titles => $titles, pager => $pager, total => $total->[0] || 'No' );
+    $self->stash( titles => $titles, pager => $pager, total => $total->[0] || 'No', per => $per, curr => $curr );
     $self->render( template => 'results' );
 };
 
@@ -139,7 +139,7 @@ __DATA__
     </ul>
 </nav>
 
-<h2><%= $total %> titles found</h2>
+<h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
 <% for my $i (0 .. $#$titles) { %>
