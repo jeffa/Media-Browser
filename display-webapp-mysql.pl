@@ -42,8 +42,13 @@ get '/fetch' => sub {
         maxPages          => $MAX_PAGE,
     });
 
+    unless ($total->[0]) {
+        $self->stash( titles => [], pager => $pager, total => 'No' );
+        $self->render( template => 'results' );
+        return;
+    }
+
     $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title) LIMIT %d,%d', $search, $pager->first - 1, $per;
-    warn "$sql\n";
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
 
     for (@$titles) {
@@ -141,7 +146,7 @@ __DATA__
   <% my $obj = $titles->[$i]; %>
   <div class="panel panel-default">
     <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
-      <h4 class="panel-title">
+      <h6 class="panel-title">
         <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
             <%= $obj->{title} %> ( <%= $obj->{year} %> )
         </a>
@@ -297,8 +302,8 @@ __DATA__
   <body onload="javascript: load()">
     <div class="container-fluid">
       <div class="row">
-        <div id="content" class="col-md-6"><%= content %></div>
-        <div id="content" class="col-md-6">
+        <div id="content" class="col-md-8"><%= content %></div>
+        <div class="col-md-4">
             <form action="javascript:void(0);" id="search" name="search" class="navbar-search">
 
                 <p>&nbsp;</p>
