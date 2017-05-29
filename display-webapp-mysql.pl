@@ -13,11 +13,7 @@ use MovieUtil qw( get_credentials );
 my $PER_PAGE = 10;
 my $MAX_PAGE = 10;
 
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
-$dbh->{mysql_enable_utf8} = 1;
+my $dbh = dbh();
 
 get '/' => sub {
     my $self = shift;
@@ -30,6 +26,11 @@ get '/fetch' => sub {
     my $per  = int( $self->param( 'per'  ) ) || $PER_PAGE;
     my $query = $self->param( 'query' );
 
+    unless ($dbh->ping) {
+        warn "Re-obtaing DB handle\n";
+        $dbh = dbh();
+    }
+
     my $search = ($query && $query ne 'ALL') ? " WHERE title LIKE '%$query%'" : '';
     my $sql = 'SELECT count(*) FROM titles' . $search;
     my ($total) = $dbh->selectall_array( $sql );
@@ -41,7 +42,7 @@ get '/fetch' => sub {
         maxPages          => $MAX_PAGE,
     });
 
-    $sql = sprintf 'SELECT * FROM titles %s ORDER BY title LIMIT %d,%d', $search, $pager->first - 1, $per;
+    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title) LIMIT %d,%d', $search, $pager->first - 1, $per;
     warn "$sql\n";
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
 
@@ -97,6 +98,15 @@ get '/fetch' => sub {
 
 app->start( daemon => '-l', 'http://*:3000' );
 
+sub dbh {
+    my $dbh = DBI->connect(
+        'DBI:mysql:database=media', get_credentials(),
+        { RaiseError => 1 },
+    );
+    $dbh->{mysql_enable_utf8} = 1;
+    return $dbh;
+}
+
 
 __DATA__
 @@ index.html.ep
@@ -133,7 +143,7 @@ __DATA__
     <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
       <h4 class="panel-title">
         <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
-            <%= $obj->{title} %>
+            <%= $obj->{title} %> ( <%= $obj->{year} %> )
         </a>
       </h4>
     </div>

@@ -6,6 +6,7 @@ CREATE TABLE titles(
     title_id        SERIAL PRIMARY KEY,
     imdb_id         VARCHAR(9) NOT NULL,
     title           VARCHAR(128) NOT NULL,
+    sort            VARCHAR(128),
     year            VARCHAR(4) NOT NULL,
     kind            VARCHAR(16),
     ratio           VARCHAR(32),
