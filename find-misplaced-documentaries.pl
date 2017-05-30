@@ -26,13 +26,13 @@ my @docs = map $_->[0], $dbh->selectall_array('
 
 for my $title_id (@docs) {
 
-    my @files = map $_->[0], $dbh->selectall_array('
-        SELECT file_name
+    my $files = $dbh->selectall_arrayref('
+        SELECT title_id, file_name
         FROM files
         WHERE title_id = ?
         AND file_name LIKE ?
     ', undef, $title_id, '/Volumes/MOVIES/%' );
 
-    next unless @files;
-    print "$_\n" for @files;
+    next unless @$files;
+    printf "%s,%s\n", @$_ for @$files;
 }
