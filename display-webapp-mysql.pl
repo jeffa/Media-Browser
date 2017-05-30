@@ -122,19 +122,19 @@ __DATA__
 <nav aria-label="Page navigation">
     <ul class="pagination">
         <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
-            <a href="javascript:set_controls( <%= $pager->previous_page %> ); fetch_results();">&laquo;</a>
+            <a href="javascript:fetch_results( <%= $pager->previous_page %> );">&laquo;</a>
         </li>
     <% for my $number ($pager->pages_in_spread) { %>
         <% if ($number) { %>
         <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
-            <a href="javascript:set_controls( <%= $number %> ); fetch_results();"><%= $number %></a>
+            <a href="javascript:fetch_results( <%= $number %> );"><%= $number %></a>
         </li>
         <% } else { %>
         <li class="disabled"><a href="javascript:void">...</a></li>
         <% } %>
     <% } %>
         <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
-            <a href="javascript:set_controls( <%= $pager->next_page %> ); fetch_results();">&raquo;</a>
+            <a href="javascript:fetch_results( <%= $pager->next_page %> );">&raquo;</a>
         </li>
     </ul>
 </nav>
@@ -148,7 +148,7 @@ __DATA__
     <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
       <h6 class="panel-title">
         <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
-            <%= $obj->{title} %> ( <%= $obj->{year} %> )
+            <%= $obj->{title} %> (<%= $obj->{year} %>)
         </a>
       </h4>
     </div>
@@ -244,21 +244,19 @@ __DATA__
             $(document).keydown(function(e) {
                 switch(e.which) {
                     case 13:
-                    set_controls( 1 );
-                    fetch_results();
+                    fetch_results( 1 );
                     default: return;
                 }
                 e.preventDefault();
             });
 
-            set_controls( 1 );
-            fetch_results();
+            fetch_results( 1 );
         }
 
-        function fetch_results() {
+        function fetch_results( curr ) {
 
             var query = document.search.query.value;
-            var curr  = document.search.curr.value;
+            //var curr  = document.search.curr.value;
 
             var params = $.param([
                 {name: "query", value: query},
@@ -267,10 +265,6 @@ __DATA__
 
             var url  = '/fetch?' + params;
             _ajaxGET( url, '#results' );
-        }
-
-        function set_controls( curr ) {
-            document.search.curr.value = curr;
         }
 
         function _ajaxGET( url, id, err ) {
@@ -310,7 +304,7 @@ __DATA__
 
                 <div class="input-append">
                     <input name="query" id="appendedInputButton" type="text" value="ALL" />
-                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results()">Go!</button>
+                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results( 1 )">Go!</button>
                 </div>
 
                 <input name="curr" type="hidden" />
