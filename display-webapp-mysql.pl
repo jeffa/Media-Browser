@@ -244,13 +244,14 @@ __DATA__
             $(document).keydown(function(e) {
                 switch(e.which) {
                     case 13:
+                    set_controls( 1 );
                     fetch_results();
                     default: return;
                 }
                 e.preventDefault();
             });
 
-            document.search.curr.value = 1;
+            set_controls( 1 );
             fetch_results();
         }
 
@@ -258,11 +259,10 @@ __DATA__
 
             var query = document.search.query.value;
             var curr  = document.search.curr.value;
-            if (!curr) { curr = 1 }
 
             var params = $.param([
-                {name: "curr",  value: document.search.curr.value},
-                {name: "query", value: document.search.query.value}
+                {name: "query", value: query},
+                {name: "curr",  value: curr}
             ]);
 
             var url  = '/fetch?' + params;
