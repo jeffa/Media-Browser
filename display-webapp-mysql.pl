@@ -139,6 +139,17 @@ __DATA__
     </ul>
 </nav>
 
+<nav aria-label="Page navigation">
+  <ul class="pagination">
+     <li class="disabled"><a>Results per page:</a></li>
+    <% for my $number (10,20,50,100,200) { %>
+      <li class="<%= $number == $per ? 'active' : '' %>">
+          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+      </li>
+    <% } %>
+  </ul>
+</nav>
+
 <h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
@@ -253,13 +264,16 @@ __DATA__
             fetch_results( 1 );
         }
 
+        function set_results_per( per ) {
+            document.search.per.value = per;
+            fetch_results( 1 );
+        }
+
         function fetch_results( curr ) {
 
-            var query = document.search.query.value;
-            //var curr  = document.search.curr.value;
-
             var params = $.param([
-                {name: "query", value: query},
+                {name: "query", value: document.search.query.value},
+                {name: "per",   value: document.search.per.value},
                 {name: "curr",  value: curr}
             ]);
 
