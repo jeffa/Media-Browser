@@ -27,7 +27,7 @@ my @docs = map $_->[0], $dbh->selectall_array('
 for my $title_id (@docs) {
 
     my $files = $dbh->selectall_arrayref('
-        SELECT title_id, file_name
+        SELECT file_id, file_name
         FROM files
         WHERE title_id = ?
         AND file_name LIKE ?
