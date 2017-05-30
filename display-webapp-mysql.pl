@@ -48,7 +48,7 @@ get '/fetch' => sub {
         return;
     }
 
-    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title) LIMIT %d,%d', $search, $pager->first - 1, $per;
+    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title),year LIMIT %d,%d', $search, $pager->first - 1, $per;
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
 
     for (@$titles) {
