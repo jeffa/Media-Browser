@@ -40,7 +40,7 @@ my $client = MongoDB->connect( 'mongodb://localhost' );
 my $db     = $client->get_database( 'movies' );
 my $titles = $db->get_collection( 'raw_titles' );
 my $search = $title ? { imdb_id => $title } : { meta => { '$exists' => 0 } };
-my $iter   = $titles->find( $search )->sort( {filename => 1} );
+my $iter   = $titles->find( $search );
 
 while (my $movie = $iter->next) {
 
