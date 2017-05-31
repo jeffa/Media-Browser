@@ -49,10 +49,16 @@ while (my $movie = $iter->next) {
         next;
     }
 
+    # create sort
+    my $sort = $meta->{title};
+    $sort =~ s/^(?:A|An|The|La|Le)\b\s+//;
+    $sort =~ s/^\W+\b\s*//;
+
     # insert title info
     $dbh->do( 'INSERT INTO titles(
             imdb_id,
             title,
+            sort,
             year,
             kind,
             ratio,
@@ -60,9 +66,10 @@ while (my $movie = $iter->next) {
             cover,
             story,
             tagline
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', undef,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', undef,
         $movie->{imdb_id},
         $meta->{title},
+        $sort,
         $meta->{year},
         $meta->{kind},
         $meta->{ratio},
