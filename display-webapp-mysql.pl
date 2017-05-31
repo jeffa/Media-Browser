@@ -142,22 +142,23 @@ __DATA__
             // enter key "submits" the form
             $(document).keydown(function(e) {
                 switch(e.which) {
-                    case 13:
-                    fetch_results( 1 );
+                    case 13: fetch_results();   break;
+                    case 37: step_left();       break;
+                    case 39: step_right();      break;
                     default: return;
                 }
                 e.preventDefault();
             });
 
-            fetch_results( 1 );
+            fetch_results();
         }
 
         function set_results_per( per ) {
             document.search.per.value = per;
-            fetch_results( 1 );
+            fetch_results();
         }
 
-        function fetch_results( curr ) {
+        function fetch_results( curr = 1 ) {
 
             var params = $.param([
                 {name: "query", value: document.search.query.value},
@@ -180,6 +181,7 @@ __DATA__
                     + '</div>'
             }
 
+            console.log( url );
             $.ajax( {
                 url: url,
                 type: 'GET',
@@ -198,17 +200,17 @@ __DATA__
   <body onload="javascript: load()">
     <div class="container-fluid">
       <div class="row">
-        <div id="content" class="col-md-8">
+        <div id="content" class="col-md-6">
             <div id="results"></div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-6">
             <form action="javascript:void(0);" id="search" name="search" class="navbar-search">
 
                 <p>&nbsp;</p>
 
                 <div class="input-append">
                     <input name="query" id="appendedInputButton" type="text" value="ALL" />
-                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results( 1 )">Go!</button>
+                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results()">Go!</button>
                 </div>
 
                 <input name="curr" type="hidden" />
@@ -222,35 +224,37 @@ __DATA__
 </html>
 
 @@ results.html.ep
+<script type="text/javascript">
+function step_left() {
+    if (<%= $pager->previous_page ? 1 : 0 %>) {
+        fetch_results( <%= $pager->previous_page %> );
+    }
+}
+
+function step_right() {
+    if (<%= $pager->next_page ? 1 : 0 %>) {
+        fetch_results( <%= $pager->next_page %> );
+    }
+}
+</script>
 <nav aria-label="Page navigation">
     <ul class="pagination">
         <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
-            <a href="javascript:fetch_results( <%= $pager->previous_page %> );">&laquo;</a>
+            <a href="javascript: step_left();">&laquo;</a>
         </li>
     <% for my $number ($pager->pages_in_spread) { %>
         <% if ($number) { %>
         <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
-            <a href="javascript:fetch_results( <%= $number %> );"><%= $number %></a>
+            <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
         </li>
         <% } else { %>
         <li class="disabled"><a href="javascript:void">...</a></li>
         <% } %>
     <% } %>
         <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
-            <a href="javascript:fetch_results( <%= $pager->next_page %> );">&raquo;</a>
+            <a href="javascript: step_right();">&raquo;</a>
         </li>
     </ul>
-</nav>
-
-<nav aria-label="Page navigation">
-  <ul class="pagination">
-     <li class="disabled"><a>Results per page:</a></li>
-    <% for my $number (10,20,50,100,200) { %>
-      <li class="<%= $number == $per ? 'active' : '' %>">
-          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
-      </li>
-    <% } %>
-  </ul>
 </nav>
 
 <h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
@@ -336,3 +340,13 @@ __DATA__
 <% } %>
 </div>
 
+<nav aria-label="Page navigation">
+  <ul class="pagination">
+     <li class="disabled"><a>Results per page:</a></li>
+    <% for my $number (10,20,50,100,200) { %>
+      <li class="<%= $number == $per ? 'active' : '' %>">
+          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+      </li>
+    <% } %>
+  </ul>
+</nav>
