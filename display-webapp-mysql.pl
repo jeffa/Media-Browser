@@ -10,13 +10,14 @@ use DBI;
 use lib 'lib';
 use MovieUtil qw( get_credentials );
 
-my $PER_PAGE = 10;
+my $PER_PAGE = 20;
 my $MAX_PAGE = 10;
 
 my $dbh = dbh();
 
 get '/' => sub {
     my $self = shift;
+    $self->stash( per => $PER_PAGE );
     $self->render( template => 'index' );
 };
 
@@ -58,6 +59,15 @@ get '/fetch' => sub {
                 SELECT file_name
                 FROM files f
                 INNER JOIN titles t ON f.title_id=t.title_id
+                WHERE t.title_id = ?
+            ', undef, $_->{title_id} )
+        ];
+
+        $_->{durations} = [
+            map $_->[0], $dbh->selectall_array('
+                SELECT duration
+                FROM durations d
+                INNER JOIN titles t ON d.title_id=t.title_id
                 WHERE t.title_id = ?
             ', undef, $_->{title_id} )
         ];
@@ -115,8 +125,101 @@ sub dbh {
 
 __DATA__
 @@ index.html.ep
-% layout 'default';
-<div id="results"></div>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Movie Collection Browser</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
+    <style type="text/css">
+        table.details { width: 100%; }
+        table.details th { text-align: right; valign: top; }
+    </style>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+
+        function load() {
+            // enter key "submits" the form
+            $(document).keydown(function(e) {
+                switch(e.which) {
+                    case 13:
+                    fetch_results( 1 );
+                    default: return;
+                }
+                e.preventDefault();
+            });
+
+            fetch_results( 1 );
+        }
+
+        function set_results_per( per ) {
+            document.search.per.value = per;
+            fetch_results( 1 );
+        }
+
+        function fetch_results( curr ) {
+
+            var params = $.param([
+                {name: "query", value: document.search.query.value},
+                {name: "per",   value: document.search.per.value},
+                {name: "curr",  value: curr}
+            ]);
+
+            var url  = '/fetch?' + params;
+            _ajaxGET( url, '#results' );
+        }
+
+        function _ajaxGET( url, id, err ) {
+
+            if (!err) {
+                err = '<div class="alert alert-danger">'
+                    + '<button type="button" class="close" data-dismiss="alert">&times;</button>'
+                    + '<strong>Error!</strong>'
+                    + ' Ajax call failed: ' 
+                    + url 
+                    + '</div>'
+            }
+
+            $.ajax( {
+                url: url,
+                type: 'GET',
+                success: function( data, status, xhr ) {
+                    $( id ).html( xhr.responseText );
+                },
+                error: function( xhr, status, error ) {
+                    $( id ).html( err );
+                }
+            });
+        }
+
+
+    </script>
+  </head>
+  <body onload="javascript: load()">
+    <div class="container-fluid">
+      <div class="row">
+        <div id="content" class="col-md-8">
+            <div id="results"></div>
+        </div>
+        <div class="col-md-4">
+            <form action="javascript:void(0);" id="search" name="search" class="navbar-search">
+
+                <p>&nbsp;</p>
+
+                <div class="input-append">
+                    <input name="query" id="appendedInputButton" type="text" value="ALL" />
+                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results( 1 )">Go!</button>
+                </div>
+
+                <input name="curr" type="hidden" />
+                <input name="per"  type="hidden" value="<%= $per %>" />
+
+            </form>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
 
 @@ results.html.ep
 <nav aria-label="Page navigation">
@@ -202,28 +305,26 @@ __DATA__
               </tr>
               <tr>
                 <th>Duration</th>
-                <td>&nbsp;</td>
+                <td><%= join(', ', @{ $obj->{durations} || [] }) %></td>
               </tr>
-              <tr>
-                <th>Language</th>
-                <td>&nbsp;</td>
-              </tr>
-              <tr>
-                <th>Country</th>
-                <td>&nbsp;</td>
-              </tr>
+              <% if ($obj->{mpaa}) { %>
               <tr>
                 <th>MPAA</th>
                 <td><%= $obj->{mpaa} %></td>
               </tr>
+              <% } %>
+              <% if ($obj->{kind}) { %>
               <tr>
                 <th>Kind</th>
                 <td><%= $obj->{kind} %></td>
               </tr>
+              <% } %>
+              <% if ($obj->{ratio}) { %>
               <tr>
                 <th>Ratio</th>
                 <td><%= $obj->{ratio} %></td>
               </tr>
+              <% } %>
             </table>
         </td><td align="right" valign="top">
             <img src="<%= $obj->{cover} %>" />
@@ -235,98 +336,3 @@ __DATA__
 <% } %>
 </div>
 
-
-@@ layouts/default.html.ep
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Movie Collection Browser</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
-    <style type="text/css">
-        table.details { width: 100%; }
-        table.details th { text-align: right; valign: top; }
-    </style>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <script type="text/javascript">
-
-        function load() {
-            // enter key "submits" the form
-            $(document).keydown(function(e) {
-                switch(e.which) {
-                    case 13:
-                    fetch_results( 1 );
-                    default: return;
-                }
-                e.preventDefault();
-            });
-
-            fetch_results( 1 );
-        }
-
-        function set_results_per( per ) {
-            document.search.per.value = per;
-            fetch_results( 1 );
-        }
-
-        function fetch_results( curr ) {
-
-            var params = $.param([
-                {name: "query", value: document.search.query.value},
-                {name: "per",   value: document.search.per.value},
-                {name: "curr",  value: curr}
-            ]);
-
-            var url  = '/fetch?' + params;
-            _ajaxGET( url, '#results' );
-        }
-
-        function _ajaxGET( url, id, err ) {
-
-            if (!err) {
-                err = '<div class="alert alert-danger">'
-                    + '<button type="button" class="close" data-dismiss="alert">&times;</button>'
-                    + '<strong>Error!</strong>'
-                    + ' Ajax call failed: ' 
-                    + url 
-                    + '</div>'
-            }
-
-            $.ajax( {
-                url: url,
-                type: 'GET',
-                success: function( data, status, xhr ) {
-                    $( id ).html( xhr.responseText );
-                },
-                error: function( xhr, status, error ) {
-                    $( id ).html( err );
-                }
-            });
-        }
-
-
-    </script>
-  </head>
-  <body onload="javascript: load()">
-    <div class="container-fluid">
-      <div class="row">
-        <div id="content" class="col-md-8"><%= content %></div>
-        <div class="col-md-4">
-            <form action="javascript:void(0);" id="search" name="search" class="navbar-search">
-
-                <p>&nbsp;</p>
-
-                <div class="input-append">
-                    <input name="query" id="appendedInputButton" type="text" value="ALL" />
-                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results( 1 )">Go!</button>
-                </div>
-
-                <input name="curr" type="hidden" />
-                <input name="per"  type="hidden" />
-
-            </form>
-        </div>
-      </div>
-    </div>
-  </body>
-</html>
