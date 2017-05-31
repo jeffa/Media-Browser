@@ -49,7 +49,7 @@ get '/update/:mongo_id/:imdb_id' => sub {
     $c->render( template => 'update' );
 };
 
-app->start( daemon => '-l', 'http://*:4000' );
+app->start( daemon => '-l', 'http://*:3000' );
 __DATA__
 @@ index.html.ep
 % layout 'default';
