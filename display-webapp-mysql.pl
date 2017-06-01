@@ -15,6 +15,8 @@ my $MAX_PAGE = 10;
 
 my $dbh = dbh();
 
+my %valid_fields = map {( $_ => 1 )} qw( title year genre director writer );
+
 get '/' => sub {
     my $self = shift;
     $self->stash( per => $PER_PAGE );
@@ -26,14 +28,30 @@ get '/fetch' => sub {
     my $curr = int( $self->param( 'curr' ) ) || 1;
     my $per  = int( $self->param( 'per'  ) ) || $PER_PAGE;
     my $query = $self->param( 'query' );
+    my $field = $self->param( 'field' );
+    my $pre   = $self->param( 'pre' );
+    my $post  = $self->param( 'post' );
+
+    $field = 'title' unless $valid_fields{$field};
 
     unless ($dbh->ping) {
         warn "Re-obtaing DB handle\n";
         $dbh = dbh();
     }
 
-    my $search = ($query && $query ne 'ALL') ? " WHERE title LIKE '%$query%'" : '';
-    my $sql = 'SELECT count(*) FROM titles' . $search;
+    my $predicate = '';
+    if ($query) {
+        $predicate = sprintf ' WHERE %s %s "%s%s%s"', 
+            $field,
+            ($pre || $post ? 'LIKE' : '='),
+            ($pre  ? '%' : ''),
+            $query,
+            ($post ? '%' : ''),
+        ;
+    }
+    warn "QUERY: $query\n PRED: $predicate\n";
+
+    my $sql = 'SELECT count(*) FROM titles' . $predicate;
     my ($total) = $dbh->selectall_array( $sql );
 
     my $pager = Data::SpreadPagination->new({
@@ -49,7 +67,7 @@ get '/fetch' => sub {
         return;
     }
 
-    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title),year LIMIT %d,%d', $search, $pager->first - 1, $per;
+    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title),year LIMIT %d,%d', $predicate, $pager->first - 1, $per;
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
 
     for (@$titles) {
@@ -162,9 +180,12 @@ __DATA__
         function fetch_results( curr = 1 ) {
 
             var params = $.param([
-                {name: "query", value: document.search.query.value},
-                {name: "per",   value: document.search.per.value},
-                {name: "curr",  value: curr}
+                {name: "field",     value: document.search.field.value},
+                {name: "pre",       value: document.search.pre.value},
+                {name: "post",      value: document.search.post.value},
+                {name: "query",     value: document.search.query.value},
+                {name: "per",       value: document.search.per.value},
+                {name: "curr",      value: curr}
             ]);
 
             var url  = '/fetch?' + params;
@@ -183,11 +204,13 @@ __DATA__
             }
 
             console.log( url );
+            var $btn = $( '#go' ).button( 'loading' );
             $.ajax( {
                 url: url,
                 type: 'GET',
                 success: function( data, status, xhr ) {
                     $( id ).html( xhr.responseText );
+                    $btn.button( 'reset' );
                 },
                 error: function( xhr, status, error ) {
                     $( id ).html( err );
@@ -205,17 +228,35 @@ __DATA__
             <div id="results"></div>
         </div>
         <div class="col-md-6">
-            <form action="javascript:void(0);" id="search" name="search" class="navbar-search">
+            <br />
+            <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
-                <p>&nbsp;</p>
+                <select name="field" class="form-control">
+                  <option value="title">Title</option>
+                  <option value="year">Year</option>
+                <!--
+                  <option value="genre">Genre</option>
+                  <option value="director">Director</option>
+                  <option value="writer">Writer</option>
+                -->
+                </select>
 
-                <div class="input-append">
-                    <input name="query" id="appendedInputButton" type="text" value="ALL" />
-                    <button class="btn btn-primary" type="button" onclick="javascript: fetch_results()">Go!</button>
+                <div class="btn-group" data-toggle="buttons">
+                  <label onclick="javascript: toggle('pre')" class="btn btn-default active"><input type="checkbox" checked="1" />%</label>
                 </div>
 
-                <input name="curr" type="hidden" />
-                <input name="per"  type="hidden" value="<%= $per %>" />
+                <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" />
+
+                <div class="btn-group" data-toggle="buttons">
+                  <label onclick="javascript: toggle('post')" class="btn btn-default active"><input type="checkbox" checked="1" />%</label>
+                </div>
+
+                <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
+
+                <input id="curr" name="curr" type="hidden" />
+                <input id="pre"  name="pre"  type="hidden" value="1" />
+                <input id="post" name="post" type="hidden" value="1" />
+                <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
 
             </form>
         </div>
@@ -228,6 +269,11 @@ __DATA__
 <script type="text/javascript">
 var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
 var curr  = 0;
+
+function toggle( param ) {
+    var value = $( '#' + param ).val();
+    $( '#' + param ).val( value ? 0 : 1 );
+}
 
 function step_left() {
     if (<%= $pager->previous_page ? 1 : 0 %>) {
@@ -242,16 +288,16 @@ function step_right() {
 }
 
 function step_up() {
-    $( '#collapse-' + panes[curr] ).collapse( 'hide' );
+    if (curr < 1) return;
     curr--;
-    if (curr < 0) curr = 0;
+    $( '#collapse-' + panes[curr+1] ).collapse( 'hide' );
     $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
 
 function step_down() {
-    $( '#collapse-' + panes[curr] ).collapse( 'hide' );
+    if (curr >= <%= $#$titles %>) return;
     curr++;
-    if (curr > <%= $#$titles %>) curr = <%= $#$titles %>;
+    $( '#collapse-' + panes[curr-1] ).collapse( 'hide' );
     $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
 </script>
