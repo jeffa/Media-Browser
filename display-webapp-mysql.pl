@@ -139,12 +139,13 @@ __DATA__
     <script type="text/javascript">
 
         function load() {
-            // enter key "submits" the form
             $(document).keydown(function(e) {
                 switch(e.which) {
                     case 13: fetch_results();   break;
                     case 37: step_left();       break;
+                    case 38: step_up();         break;
                     case 39: step_right();      break;
+                    case 40: step_down();       break;
                     default: return;
                 }
                 e.preventDefault();
@@ -225,6 +226,9 @@ __DATA__
 
 @@ results.html.ep
 <script type="text/javascript">
+var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
+var curr  = 0;
+
 function step_left() {
     if (<%= $pager->previous_page ? 1 : 0 %>) {
         fetch_results( <%= $pager->previous_page %> );
@@ -235,6 +239,20 @@ function step_right() {
     if (<%= $pager->next_page ? 1 : 0 %>) {
         fetch_results( <%= $pager->next_page %> );
     }
+}
+
+function step_up() {
+    $( '#collapse-' + panes[curr] ).collapse( 'hide' );
+    curr--;
+    if (curr < 0) curr = 0;
+    $( '#collapse-' + panes[curr] ).collapse( 'show' );
+}
+
+function step_down() {
+    $( '#collapse-' + panes[curr] ).collapse( 'hide' );
+    curr++;
+    if (curr > <%= $#$titles %>) curr = <%= $#$titles %>;
+    $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
 </script>
 <nav aria-label="Page navigation">
