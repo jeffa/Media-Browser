@@ -13,7 +13,7 @@ use MovieUtil qw( get_credentials );
 
 GetOptions (
     'id=s'      => \my $title_id,
-    'dry-run'   => \my $dry,
+    'dry-run'   => \my $dry_run,
     'no-prompt' => \my $no_prompt,
     'help'      => \my $help,
     'man'       => \my $man,
@@ -45,46 +45,80 @@ if ($title_id =~ /^tt\d{7}$/) {
 
 { # durations
     my ($total) = $dbh->selectrow_array( 'select count(*) from durations where title_id = ?', undef, $title_id );
-    printf "%d durations found\n", $total;
+    next unless $total;
+    my $sql = "delete from durations where title_id = ? limit $total";
+    do_sql( $sql, $title_id );
 }
 
 { # files
     my ($total) = $dbh->selectrow_array( 'select count(*) from files where title_id = ?', undef, $title_id );
-    printf "%d files found\n", $total;
-}
-
-{ # genre_xref
-    my ($total) = $dbh->selectrow_array( 'select count(*) from genre_xref where title_id = ?', undef, $title_id );
-    printf "%d genre_xref found\n", $total;
+    next unless $total;
+    my $sql = "delete from files where title_id = ? limit $total";
+    do_sql( $sql, $title_id );
 }
 
 { # genres
     my $sth = $dbh->selectall_arrayref( '
-        select x.genre_id, g.genre_name, count(*) as count
+        select x.genre_id, count(*) as count
         from genre_xref x 
         inner join genres g on x.genre_id=g.genre_id 
         where x.genre_id in( select genre_id from genre_xref where title_id = ? ) 
         group by x.genre_id
         having count = 1
     ', {Slice=>{}}, $title_id );
-    printf "%d orphan genres found\n", scalar @$sth;
+    next unless scalar @$sth;
+    my $sql = 'delete from genres where genre_id in( ' . join(', ', map $_->{genre_id}, @$sth ) . ' ) limit ' . scalar @$sth;
+    do_sql( $sql, $title_id );
+}
+
+{ # genre_xref
+    my ($total) = $dbh->selectrow_array( 'select count(*) from genre_xref where title_id = ?', undef, $title_id );
+    next unless $total;
+    my $sql = "delete from genre_xref where title_id = ? limit $total";
+    do_sql( $sql, $title_id );
 }
 
 { # people
     my $sth = $dbh->selectall_arrayref( '
-        select x.person_id, p.person_name, count(*) as count
+        select x.person_id, count(*) as count
         from role_xref x
         inner join people p on x.person_id=p.person_id
         where x.person_id in( select person_id from role_xref where title_id = ? )
         group by x.person_id
         having count = 1
     ', {Slice=>{}}, $title_id );
-    printf "%d orphan people found\n", scalar @$sth;
+    next unless scalar @$sth;
+    my $sql = 'delete from people where person_id in( ' . join(', ', map $_->{person_id}, @$sth ) . ' ) limit ' . scalar @$sth;
+    do_sql( $sql, $title_id );
 }
 
 { # role_xref
     my ($total) = $dbh->selectrow_array( 'select count(*) from role_xref where title_id = ?', undef, $title_id );
-    printf "%d role_xref found\n", $total;
+    next unless $total;
+    my $sql = "delete from role_xref where title_id = ? limit $total";
+    do_sql( $sql, $title_id );
+}
+
+{ # final title
+    my $sql = "delete from titles where title_id = ? limit 1";
+    do_sql( $sql, $title_id );
+}
+
+
+sub do_sql {
+    my ($sql,@args) = @_;
+    my $do_sql = $sql;
+
+    $sql =~ s/\?/$_/ for @args;
+    print $sql;
+
+    if ($dry_run) {
+        print "\n";
+        return;
+    }
+
+    $dbh->do( $sql, undef, @args );
+    print ": DELETES!!!\n";
 }
 
 
