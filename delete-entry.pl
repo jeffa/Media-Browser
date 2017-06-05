@@ -22,25 +22,61 @@ pod2usage( -verbose => 0 ) if $help;
 pod2usage( -verbose => 2 ) if $man;
 pod2usage( -verbose => 0 ) unless $title_id;
 
-#TODO: lookup title_id if id is actually imdb_id
-
 my $dbh = DBI->connect(
     'DBI:mysql:database=media', get_credentials(),
     { RaiseError => 1 },
 );
 $dbh->{mysql_enable_utf8} = 1;
 
-=to delete
-durations   - from title_id
-files       - from title_id
-genre_xref  - from title_id
-role_xref   - from title_id
-genres      - if last genre
-select genre_name,count(*) from genre_xref x inner join genres g on x.genre_id=g.genre_id where x.genre_id in( select genre_id from genre_xref where title_id=3228 ) group by x.genre_id;
-people      - if last person
-roles       - if last role
-titles
-=end
+if ($title_id =~ /^tt\d{7}$/) {
+    ($title_id) =  $dbh->selectrow_array( 'select title_id from titles where imdb_id = ?', undef, $title_id );
+}
+
+{ # titles
+    my ($total) = $dbh->selectrow_array( 'select count(*) from titles where title_id = ?', undef, $title_id );
+    printf "%d titles found\n", $total;
+
+}
+
+{ # durations
+    my ($total) = $dbh->selectrow_array( 'select count(*) from durations where title_id = ?', undef, $title_id );
+    printf "%d durations found\n", $total;
+}
+
+{ # files
+    my ($total) = $dbh->selectrow_array( 'select count(*) from files where title_id = ?', undef, $title_id );
+    printf "%d files found\n", $total;
+}
+
+{ # genre_xref
+    my ($total) = $dbh->selectrow_array( 'select count(*) from genre_xref where title_id = ?', undef, $title_id );
+    printf "%d genre_xref found\n", $total;
+}
+
+{ # genres
+    my $sth = $dbh->selectall_arrayref( '
+        select x.genre_id, g.genre_name, count(*) as count
+        from genre_xref x 
+        inner join genres g on x.genre_id=g.genre_id 
+        where x.genre_id in( select genre_id from genre_xref where title_id = ? ) 
+        group by x.genre_id
+        having count = 1
+    ', {Slice=>{}}, $title_id );
+    printf "%d orphan genres found\n", scalar @$sth;
+}
+
+{ # people
+;
+}
+
+{ # roles
+;
+}
+
+{ # role_xref
+    my ($total) = $dbh->selectrow_array( 'select count(*) from role_xref where title_id = ?', undef, $title_id );
+    printf "%d role_xref found\n", $total;
+}
 
 
 __END__
