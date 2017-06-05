@@ -30,12 +30,17 @@ $dbh->{mysql_enable_utf8} = 1;
 
 if ($title_id =~ /^tt\d{7}$/) {
     ($title_id) =  $dbh->selectrow_array( 'select title_id from titles where imdb_id = ?', undef, $title_id );
+    die "No imdb_id match for that title_id\n" unless $title_id;
 }
 
 { # titles
-    my ($total) = $dbh->selectrow_array( 'select count(*) from titles where title_id = ?', undef, $title_id );
-    printf "%d titles found\n", $total;
-
+    my ($title) = $dbh->selectrow_array( 'select title from titles where title_id = ?', undef, $title_id );
+    die "No title found for $title_id\n" unless $title;
+    unless ($no_prompt) {
+        printf "Really delete %s ?!?! ", $title;
+        chomp( my $answer = <STDIN> );
+        exit unless $answer =~ /^y/i;
+    }
 }
 
 { # durations
@@ -66,11 +71,15 @@ if ($title_id =~ /^tt\d{7}$/) {
 }
 
 { # people
-;
-}
-
-{ # roles
-;
+    my $sth = $dbh->selectall_arrayref( '
+        select x.person_id, p.person_name, count(*) as count
+        from role_xref x
+        inner join people p on x.person_id=p.person_id
+        where x.person_id in( select person_id from role_xref where title_id = ? )
+        group by x.person_id
+        having count = 1
+    ', {Slice=>{}}, $title_id );
+    printf "%d orphan people found\n", scalar @$sth;
 }
 
 { # role_xref
