@@ -272,7 +272,7 @@ var curr  = 0;
 
 function toggle( param ) {
     var value = $( '#' + param ).val();
-    $( '#' + param ).val( value ? 0 : 1 );
+    $( '#' + param ).val( value > 0 ? 0 : 1 );
 }
 
 function step_left() {
