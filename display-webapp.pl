@@ -188,8 +188,8 @@ __DATA__
     <title>Movie Collection Browser</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
     <style type="text/css">
-        table.details { width: 100%; }
-        table.details th { text-align: right; valign: top; }
+        table.details { padding: 10; }
+        table.details th { width: 15%; vertical-align: top; }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
@@ -263,10 +263,10 @@ __DATA__
   <body onload="javascript: load()">
     <div class="container-fluid">
       <div class="row">
-        <div id="content" class="col-md-6">
+        <div id="content" class="col-md-7">
             <div id="results"></div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-5">
             <br />
             <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
@@ -407,8 +407,8 @@ function by_link( field, value ) {
     <div id="collapse-<%= $obj->{title_id} %>" class="panel-collapse collapse <%= $i ? '' : 'in' %>" role="tabpanel" aria-labelledby="heading-<%= $obj->{title_id} %>">
       <div class="panel-body">
 
-        <table class="details" width="50%"><tr><td valign="top">
-            <table class="table-striped">
+        <table width="100%"><tr><td valign="top">
+            <table class="table-striped details">
               <tr>
                 <th>IMDB ID</th>
                 <td><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></td>
