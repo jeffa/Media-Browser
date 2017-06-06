@@ -14,7 +14,7 @@ my $MAX_PAGE = 10;
 
 my $dbh = get_dbh();
 
-my %valid_fields = map {( $_ => 1 )} qw( title year genre director writer );
+my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer );
 
 get '/' => sub {
     my $self = shift;
@@ -31,7 +31,7 @@ get '/fetch' => sub {
     my $pre   = $self->param( 'pre' );
     my $post  = $self->param( 'post' );
 
-    $field = 'title' unless $valid_fields{$field};
+    $field = 'sort' unless $valid_fields{$field};
 
     unless ($dbh->ping) {
         warn "Re-obtaing DB handle\n";
@@ -66,7 +66,7 @@ get '/fetch' => sub {
         return;
     }
 
-    $sql = sprintf 'SELECT * FROM titles %s ORDER BY coalesce(sort,title),year LIMIT %d,%d', $predicate, $pager->first - 1, $per;
+    $sql = sprintf 'SELECT * FROM titles %s ORDER BY sort,year LIMIT %d,%d', $predicate, $pager->first - 1, $per;
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
 
     for (@$titles) {
@@ -223,7 +223,7 @@ __DATA__
             <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
                 <select name="field" class="form-control">
-                  <option value="title">Title</option>
+                  <option value="sort">Title</option>
                   <option value="year">Year</option>
                 <!--
                   <option value="genre">Genre</option>

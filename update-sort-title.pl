@@ -14,13 +14,7 @@ my $sth = $dbh->selectall_arrayref(
 );
 
 for my $obj (@$sth) {
-    if ($obj->{title} =~ s/^(?:A|An|The|La|Le)\b\s+//) {
-        warn "change to $obj->{title}\n";
-        $dbh->do('update titles set sort = ? where title_id = ?', undef, $obj->{title}, $obj->{title_id});
-    }
-    if ($obj->{title} =~ s/^\W+\b\s*//) {
-        next unless $obj->{title};
-        warn "change to $obj->{title}\n";
-        $dbh->do('update titles set sort = ? where title_id = ?', undef, $obj->{title}, $obj->{title_id});
-    }
+    $obj->{title} =~ s/^(?:A|An|The|La|Le)\b\s+//;
+    $obj->{title} =~ s/^\W+\b\s*//;
+    $dbh->do('update titles set sort = ? where title_id = ?', undef, $obj->{title}, $obj->{title_id});
 }
