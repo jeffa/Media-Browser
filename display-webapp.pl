@@ -14,7 +14,7 @@ my $MAX_PAGE = 10;
 
 my $dbh = get_dbh();
 
-my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer );
+my %valid_fields = map {( $_ => 1 )} qw( sort year genre person );
 
 get '/' => sub {
     my $self = shift;
@@ -34,6 +34,7 @@ get '/fetch' => sub {
     my $name_id  = $self->param( 'name_id' );
 
     $field = 'sort' unless $valid_fields{$field};
+    warn "field = $field\n";
 
     unless ($dbh->ping) {
         warn "Re-obtaing DB handle\n";
@@ -43,13 +44,21 @@ get '/fetch' => sub {
     my $predicate = '';
     my @vars;
     if ($query) {
-        $predicate = sprintf ' WHERE %s %s "%s%s%s"', 
-            $field,
-            ($pre || $post ? 'LIKE' : '='),
-            ($pre  ? '%' : ''),
-            $query,
-            ($post ? '%' : ''),
-        ;
+        if ($field eq 'sort') {
+            $predicate = sprintf ' WHERE %s %s "%s%s%s"', 
+                $field,
+                ($pre || $post ? 'LIKE' : '='),
+                ($pre  ? '%' : ''),
+                $query,
+                ($post ? '%' : ''),
+            ;
+        } elsif ($field eq 'genre') {
+            $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_name = ?';
+            push @vars, $query;
+        } elsif ($field eq 'person') {
+            $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_name = ?';
+            push @vars, $query;
+        }
     } elsif ($genre_id) {
         $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
         push @vars, $genre_id;
@@ -181,8 +190,8 @@ __DATA__
 
             var params = $.param([
                 {name: "curr",      value: curr},
-                {name: "query",     value: document.search.query.value},
                 {name: "field",     value: document.search.field.value},
+                {name: "query",     value: document.search.query.value},
                 {name: "per",       value: document.search.per.value},
                 {name: "pre",       value: document.search.pre.value},
                 {name: "post",      value: document.search.post.value},
@@ -237,11 +246,8 @@ __DATA__
                 <select name="field" class="form-control">
                   <option value="sort">Title</option>
                   <option value="year">Year</option>
-                <!--
                   <option value="genre">Genre</option>
-                  <option value="director">Director</option>
-                  <option value="writer">Writer</option>
-                -->
+                  <option value="person">Person</option>
                 </select>
 
                 <div class="btn-group" data-toggle="buttons">
