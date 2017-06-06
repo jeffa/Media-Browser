@@ -52,18 +52,30 @@ get '/fetch' => sub {
             ;
         } elsif ($field eq 'genre') {
             if ($query =~ /^\d+$/) {
-                $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
+                $predicate = ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
+                push @vars, $query;
             } else {
-                $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_name = ?';
+                $predicate = ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id'
+                            . sprintf ' WHERE g.genre_name %s "%s%s%s"', 
+                                ($pre || $post ? 'LIKE' : '='),
+                                ($pre  ? '%' : ''),
+                                $query,
+                                ($post ? '%' : ''),
+                ;
             }
-            push @vars, $query;
         } elsif ($field eq 'person') {
             if ($query =~ /^\d+$/) {
-                $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
+                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
+                push @vars, $query;
             } else {
-                $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_name = ?';
+                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id'
+                            . sprintf ' WHERE p.person_name %s "%s%s%s"', 
+                                ($pre || $post ? 'LIKE' : '='),
+                                ($pre  ? '%' : ''),
+                                $query,
+                                ($post ? '%' : ''),
+                ;
             }
-            push @vars, $query;
         }
     }
     warn "QUERY: $query\n PRED: $predicate\n";
@@ -227,7 +239,6 @@ __DATA__
                 }
             });
         }
-
 
     </script>
   </head>
