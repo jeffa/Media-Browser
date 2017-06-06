@@ -8,9 +8,10 @@ our @EXPORT_OK = qw(
     extract_imdb
     get_details
     get_raw_titles
-    get_credentials
+    get_dbh
 );
 
+use DBI;
 use MongoDB;
 use IMDB::Film;
 use File::Slurp;
@@ -22,9 +23,16 @@ use Encode qw( encode decode );
 
 my @prune = get_prune();
 
-sub get_credentials {
-    chomp( my $text = read_file( '.secret' ) );
-    return split /\s+/, $text;
+chomp( my $text = read_file( '.secret' ) );
+my @creds = split /\s+/, $text;
+
+sub get_dbh {
+    my $dbh = DBI->connect(
+        'DBI:mysql:database=media', @creds,
+        { RaiseError => 1 },
+    );
+    $dbh->{mysql_enable_utf8} = 1;
+    return $dbh;
 }
 
 sub get_raw_titles {

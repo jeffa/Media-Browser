@@ -2,16 +2,12 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 
 use lib 'lib';
-use MovieUtil qw( get_credentials );
+use MovieUtil qw( get_dbh );
 local $/ = "\n";
  
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
+my $dbh = get_dbh();
 
 my @docs = map $_->[0], $dbh->selectall_array('
     SELECT t.title_id

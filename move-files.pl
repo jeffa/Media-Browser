@@ -9,7 +9,7 @@ use DBI;
 use File::Basename;
 
 use lib 'lib';
-use MovieUtil qw( get_credentials );
+use MovieUtil qw( get_dbh );
 
 GetOptions (
     'dest=s'    => \my $destination,
@@ -21,11 +21,7 @@ pod2usage( -verbose => 2 ) if $man;
 pod2usage( 'dest must be valid path' ) unless $destination;
 $destination =~ s{$}{/} unless $destination =~ m{/$};
 
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
-$dbh->{mysql_enable_utf8} = 1;
+my $dbh = get_dbh();
 
 while (my $line = <STDIN>) {
     my ( $file_id, $filename ) = split /,/, $line;

@@ -2,15 +2,11 @@
 use strict;
 use warnings;
 use Data::Dumper;
-use DBI;
 
 use lib 'lib';
-use MovieUtil qw( get_credentials );
+use MovieUtil qw( get_dbh );
  
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
+my $dbh = get_dbh();
 
 my $sth = $dbh->selectall_arrayref(
     'select title_id,title from titles',

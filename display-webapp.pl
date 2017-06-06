@@ -5,15 +5,14 @@ use Data::Dumper;
 
 use Mojolicious::Lite;
 use Data::SpreadPagination;
-use DBI;
 
 use lib 'lib';
-use MovieUtil qw( get_credentials );
+use MovieUtil qw( get_dbh );
 
 my $PER_PAGE = 20;
 my $MAX_PAGE = 10;
 
-my $dbh = dbh();
+my $dbh = get_dbh();
 
 my %valid_fields = map {( $_ => 1 )} qw( title year genre director writer );
 
@@ -36,7 +35,7 @@ get '/fetch' => sub {
 
     unless ($dbh->ping) {
         warn "Re-obtaing DB handle\n";
-        $dbh = dbh();
+        $dbh = get_dbh();
     }
 
     my $predicate = '';
@@ -131,14 +130,6 @@ get '/fetch' => sub {
 
 app->start( daemon => '-l', 'http://*:3000' );
 
-sub dbh {
-    my $dbh = DBI->connect(
-        'DBI:mysql:database=media', get_credentials(),
-        { RaiseError => 1 },
-    );
-    $dbh->{mysql_enable_utf8} = 1;
-    return $dbh;
-}
 
 
 __DATA__

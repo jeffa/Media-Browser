@@ -3,21 +3,14 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use DBI;
 use open ':std', ':encoding(UTF-8)';
- 
 use lib 'lib';
-use MovieUtil qw( get_raw_titles get_credentials );
+use MovieUtil qw( get_raw_titles get_dbh );
 
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
-$dbh->{mysql_enable_utf8} = 1;
-
+my $dbh    = get_dbh();
 my $titles = get_raw_titles();
+my $iter   = $titles->find();
 
-my $iter = $titles->find();
 while (my $movie = $iter->next) {
 
     my $title_id;

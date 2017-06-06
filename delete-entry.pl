@@ -4,12 +4,10 @@ use warnings;
 use Pod::Usage;
 use Getopt::Long;
 use Data::Dumper;
-
-use DBI;
 use File::Basename;
 
 use lib 'lib';
-use MovieUtil qw( get_credentials );
+use MovieUtil qw( get_dbh );
 
 GetOptions (
     'id=s'      => \my $title_id,
@@ -22,11 +20,7 @@ pod2usage( -verbose => 0 ) if $help;
 pod2usage( -verbose => 2 ) if $man;
 pod2usage( -verbose => 0 ) unless $title_id;
 
-my $dbh = DBI->connect(
-    'DBI:mysql:database=media', get_credentials(),
-    { RaiseError => 1 },
-);
-$dbh->{mysql_enable_utf8} = 1;
+my $dbh = get_dbh();
 
 if ($title_id =~ /^tt\d{7}$/) {
     ($title_id) =  $dbh->selectrow_array( 'select title_id from titles where imdb_id = ?', undef, $title_id );
