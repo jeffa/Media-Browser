@@ -30,6 +30,7 @@ get '/fetch' => sub {
     my $field = $self->param( 'field' );
     my $pre   = $self->param( 'pre' );
     my $post  = $self->param( 'post' );
+    my $sort  = $self->param( 'sort' );
 
     $field = 'sort' unless $valid_fields{$field};
     warn "field = $field\n";
@@ -78,7 +79,6 @@ get '/fetch' => sub {
             }
         }
     }
-    warn "QUERY: $query\n PRED: $predicate\n";
 
     my $sql = 'SELECT count(*) FROM titles' . $predicate;
     my ($total) = $dbh->selectall_array( $sql, undef, @vars );
@@ -96,7 +96,17 @@ get '/fetch' => sub {
         return;
     }
 
-    $sql = sprintf 'SELECT * FROM titles %s ORDER BY sort,year LIMIT %d,%d', $predicate, $pager->first - 1, $per;
+    my $order_by = 'sort, year';
+    if ($sort eq 'year') {
+        $order_by = 'year, sort';
+    } elsif ($sort eq 'sortD') {
+        $order_by = 'sort DESC, year';
+    } elsif ($sort eq 'yearD') {
+        $order_by = 'year DESC, sort';
+    }
+
+    $sql = sprintf 'SELECT * FROM titles %s ORDER BY %s LIMIT %d,%d', $predicate, $order_by, $pager->first - 1, $per;
+    warn "$sql\n";
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}}, @vars );
 
     for (@$titles) {
@@ -154,7 +164,15 @@ get '/fetch' => sub {
         ;
     }
 
-    $self->stash( titles => $titles, pager => $pager, total => $total->[0] || 'No', per => $per, curr => $curr );
+    $self->stash(
+        titles => $titles,
+        pager  => $pager,
+        total  => $total->[0] || 'No',
+        per    => $per,
+        curr   => $curr,
+        sort   => $sort,
+    );
+
     $self->render( template => 'results' );
 };
 
@@ -278,6 +296,7 @@ __DATA__
                 <input id="sort" name="sort" type="hidden" value="sort" />
 
             </form>
+
         </div>
       </div>
     </div>
@@ -320,6 +339,11 @@ function step_down() {
     $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
 
+function sort_by( field ) {
+    document.search.sort.value = field;
+    fetch_results();
+}
+
 function by_link( field, value ) {
     document.search.pre.value = 0;
     document.search.post.value = 0;
@@ -350,6 +374,24 @@ function by_link( field, value ) {
 </nav>
 
 <h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
+
+<nav aria-label="Sort navigation">
+  <ul class="pagination">
+     <li class="disabled"><a>Order by:</a></li>
+     <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'sort' );">Title &#x25B2;</a>
+     </li>
+     <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'sortD' );">Title &#x25BC;</a>
+     </li>
+     <li class="<%= $sort eq 'year' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'year' );">Year &#x25B2;</a>
+     </li>
+     <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'yearD' );">Year &#x25BC;</a>
+     </li>
+  </ul>
+</nav>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
 <% for my $i (0 .. $#$titles) { %>
@@ -436,7 +478,7 @@ function by_link( field, value ) {
 <% } %>
 </div>
 
-<nav aria-label="Page navigation">
+<nav aria-label="Per navigation">
   <ul class="pagination">
      <li class="disabled"><a>Results per page:</a></li>
     <% for my $number (10,20,50,100,200) { %>
