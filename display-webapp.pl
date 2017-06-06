@@ -30,6 +30,8 @@ get '/fetch' => sub {
     my $field = $self->param( 'field' );
     my $pre   = $self->param( 'pre' );
     my $post  = $self->param( 'post' );
+    my $genre_id = $self->param( 'genre_id' );
+    my $name_id  = $self->param( 'name_id' );
 
     $field = 'sort' unless $valid_fields{$field};
 
@@ -39,6 +41,7 @@ get '/fetch' => sub {
     }
 
     my $predicate = '';
+    my @vars;
     if ($query) {
         $predicate = sprintf ' WHERE %s %s "%s%s%s"', 
             $field,
@@ -47,11 +50,17 @@ get '/fetch' => sub {
             $query,
             ($post ? '%' : ''),
         ;
+    } elsif ($genre_id) {
+        $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
+        push @vars, $genre_id;
+    } elsif ($name_id) {
+        $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
+        push @vars, $name_id;
     }
     warn "QUERY: $query\n PRED: $predicate\n";
 
     my $sql = 'SELECT count(*) FROM titles' . $predicate;
-    my ($total) = $dbh->selectall_array( $sql );
+    my ($total) = $dbh->selectall_array( $sql, undef, @vars );
 
     my $pager = Data::SpreadPagination->new({
         totalEntries      => $total->[0],
@@ -67,7 +76,7 @@ get '/fetch' => sub {
     }
 
     $sql = sprintf 'SELECT * FROM titles %s ORDER BY sort,year LIMIT %d,%d', $predicate, $pager->first - 1, $per;
-    my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}} );
+    my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}}, @vars );
 
     for (@$titles) {
 
@@ -89,19 +98,19 @@ get '/fetch' => sub {
             ', undef, $_->{title_id} )
         ];
 
-        $_->{genres} = [
-            map $_->[0], $dbh->selectall_array('
-                SELECT genre_name
+        $_->{genres} = 
+            $dbh->selectall_arrayref('
+                SELECT g.genre_name, g.genre_id
                 FROM genres g
                 INNER JOIN genre_xref x ON g.genre_id=x.genre_id
                 INNER JOIN titles t on x.title_id=t.title_id
                 WHERE t.title_id = ?
-            ', undef, $_->{title_id} )
-        ];
+            ', {Slice=>{}}, $_->{title_id} )
+        ;
 
         $_->{directors} = 
             $dbh->selectall_arrayref('
-                SELECT p.person_name, p.imdb_id
+                SELECT p.person_name, p.person_id
                 FROM people p
                 INNER JOIN role_xref x ON p.person_id = x.person_id
                 INNER JOIN titles t ON x.title_id = t.title_id
@@ -113,7 +122,7 @@ get '/fetch' => sub {
 
         $_->{writers} =
             $dbh->selectall_arrayref('
-                SELECT person_name, p.imdb_id
+                SELECT person_name, p.person_id
                 FROM people p
                 INNER JOIN role_xref x ON p.person_id = x.person_id
                 INNER JOIN titles t ON x.title_id = t.title_id
@@ -171,12 +180,15 @@ __DATA__
         function fetch_results( curr = 1 ) {
 
             var params = $.param([
+                {name: "curr",      value: curr},
+                {name: "query",     value: document.search.query.value},
                 {name: "field",     value: document.search.field.value},
+                {name: "per",       value: document.search.per.value},
                 {name: "pre",       value: document.search.pre.value},
                 {name: "post",      value: document.search.post.value},
-                {name: "query",     value: document.search.query.value},
-                {name: "per",       value: document.search.per.value},
-                {name: "curr",      value: curr}
+                {name: "sort",      value: document.search.sort.value},
+                {name: "name_id",   value: document.search.name_id.value},
+                {name: "genre_id",  value: document.search.genre_id.value}
             ]);
 
             var url  = '/fetch?' + params;
@@ -245,9 +257,12 @@ __DATA__
                 <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
 
                 <input id="curr" name="curr" type="hidden" />
+                <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
                 <input id="pre"  name="pre"  type="hidden" value="1" />
                 <input id="post" name="post" type="hidden" value="1" />
-                <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
+                <input id="sort" name="sort" type="hidden" value="sort" />
+                <input id="name_id" name="name_id" type="hidden" />
+                <input id="genre_id" name="genre_id" type="hidden" />
 
             </form>
         </div>
@@ -291,6 +306,27 @@ function step_down() {
     $( '#collapse-' + panes[curr-1] ).collapse( 'hide' );
     $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
+
+function go_year( year ) {
+    document.search.pre.value = 0;
+    document.search.post.value = 0;
+    document.search.field.value = 'year';
+    document.search.query.value = year;
+    fetch_results();
+}
+
+function go_name( name_id ) {
+    document.search.query.value = '';
+    document.search.name_id.value = name_id;
+    fetch_results();
+}
+
+function go_genre( genre_id ) {
+    document.search.query.value = '';
+    document.search.genre_id.value = genre_id;
+    fetch_results();
+}
+
 </script>
 <nav aria-label="Page navigation">
     <ul class="pagination">
@@ -332,7 +368,7 @@ function step_down() {
             <table class="table-striped">
               <tr>
                 <th>IMDB ID</th>
-                <td><a href="http://www.imdb.com/title/<%= $obj->{imdb_id} %>"><%= $obj->{imdb_id} %></a></td>
+                <td><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></td>
               </tr>
               <tr>
                 <th>Filenames</th>
@@ -340,13 +376,13 @@ function step_down() {
               </tr>
               <tr>
                 <th>Year</th>
-                <td><%= $obj->{year} %></td>
+                <td><%= link_to $obj->{year} => "javascript: go_year( '$obj->{year}' )" %></td>
               </tr>
               <tr>
                 <th>Director</th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
-                    <a href="http://www.imdb.com/name/<%= $_->{imdb_id} %>"><%= $_->{person_name} %></a><br />
+                    <%= link_to $_->{person_name} => "javascript: go_name( '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
@@ -354,13 +390,17 @@ function step_down() {
                 <th>Writer</th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
-                    <a href="http://www.imdb.com/name/<%= $_->{imdb_id} %>"><%= $_->{person_name} %></a><br />
+                    <%= link_to $_->{person_name} => "javascript: go_name( '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
               <tr>
                 <th>Genre</th>
-                <td><%= join(', ', @{ $obj->{genres} || [] }) %></td>
+                <td>
+                <% for (@{$obj->{genres} || []}) { %>
+                    <%= link_to $_->{genre_name} => "javascript: go_genre( '$_->{genre_id}' )" %><br />
+                <% } %>
+                </td>
               </tr>
               <tr>
                 <th>Duration</th>
