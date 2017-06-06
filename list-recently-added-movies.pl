@@ -25,7 +25,7 @@ my @sorted = sort { -M $a <=> -M $b } File::Find::Rule
     ->in( $dir )
 ;
 
-print "$_\n" for @sorted[ 0 .. $limit ];
+print "$_\n" for @sorted[ 0 .. $limit - 1 ];
 
 __END__
 =head1 NAME
