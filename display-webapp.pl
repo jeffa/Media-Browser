@@ -30,8 +30,6 @@ get '/fetch' => sub {
     my $field = $self->param( 'field' );
     my $pre   = $self->param( 'pre' );
     my $post  = $self->param( 'post' );
-    my $genre_id = $self->param( 'genre_id' );
-    my $name_id  = $self->param( 'name_id' );
 
     $field = 'sort' unless $valid_fields{$field};
     warn "field = $field\n";
@@ -44,7 +42,7 @@ get '/fetch' => sub {
     my $predicate = '';
     my @vars;
     if ($query) {
-        if ($field eq 'sort') {
+        if ($field eq 'sort' or $field eq 'year') {
             $predicate = sprintf ' WHERE %s %s "%s%s%s"', 
                 $field,
                 ($pre || $post ? 'LIKE' : '='),
@@ -53,18 +51,20 @@ get '/fetch' => sub {
                 ($post ? '%' : ''),
             ;
         } elsif ($field eq 'genre') {
-            $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_name = ?';
+            if ($query =~ /^\d+$/) {
+                $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
+            } else {
+                $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_name = ?';
+            }
             push @vars, $query;
         } elsif ($field eq 'person') {
-            $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_name = ?';
+            if ($query =~ /^\d+$/) {
+                $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
+            } else {
+                $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_name = ?';
+            }
             push @vars, $query;
         }
-    } elsif ($genre_id) {
-        $predicate = sprintf ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
-        push @vars, $genre_id;
-    } elsif ($name_id) {
-        $predicate = sprintf ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
-        push @vars, $name_id;
     }
     warn "QUERY: $query\n PRED: $predicate\n";
 
@@ -195,9 +195,7 @@ __DATA__
                 {name: "per",       value: document.search.per.value},
                 {name: "pre",       value: document.search.pre.value},
                 {name: "post",      value: document.search.post.value},
-                {name: "sort",      value: document.search.sort.value},
-                {name: "name_id",   value: document.search.name_id.value},
-                {name: "genre_id",  value: document.search.genre_id.value}
+                {name: "sort",      value: document.search.sort.value}
             ]);
 
             var url  = '/fetch?' + params;
@@ -267,8 +265,6 @@ __DATA__
                 <input id="pre"  name="pre"  type="hidden" value="1" />
                 <input id="post" name="post" type="hidden" value="1" />
                 <input id="sort" name="sort" type="hidden" value="sort" />
-                <input id="name_id" name="name_id" type="hidden" />
-                <input id="genre_id" name="genre_id" type="hidden" />
 
             </form>
         </div>
@@ -313,23 +309,11 @@ function step_down() {
     $( '#collapse-' + panes[curr] ).collapse( 'show' );
 }
 
-function go_year( year ) {
+function by_link( field, value ) {
     document.search.pre.value = 0;
     document.search.post.value = 0;
-    document.search.field.value = 'year';
-    document.search.query.value = year;
-    fetch_results();
-}
-
-function go_name( name_id ) {
-    document.search.query.value = '';
-    document.search.name_id.value = name_id;
-    fetch_results();
-}
-
-function go_genre( genre_id ) {
-    document.search.query.value = '';
-    document.search.genre_id.value = genre_id;
+    document.search.field.value = field;
+    document.search.query.value = value;
     fetch_results();
 }
 
@@ -382,13 +366,13 @@ function go_genre( genre_id ) {
               </tr>
               <tr>
                 <th>Year</th>
-                <td><%= link_to $obj->{year} => "javascript: go_year( '$obj->{year}' )" %></td>
+                <td><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></td>
               </tr>
               <tr>
                 <th>Director</th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: go_name( '$_->{person_id}' )" %><br />
+                    <%= link_to $_->{person_name} => "javascript: by_link( 'name', '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
@@ -396,7 +380,7 @@ function go_genre( genre_id ) {
                 <th>Writer</th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: go_name( '$_->{person_id}' )" %><br />
+                    <%= link_to $_->{person_name} => "javascript: by_link( 'name', '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
@@ -404,7 +388,7 @@ function go_genre( genre_id ) {
                 <th>Genre</th>
                 <td>
                 <% for (@{$obj->{genres} || []}) { %>
-                    <%= link_to $_->{genre_name} => "javascript: go_genre( '$_->{genre_id}' )" %><br />
+                    <%= link_to $_->{genre_name} => "javascript: by_link( 'genre', '$_->{genre_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
