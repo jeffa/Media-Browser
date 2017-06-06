@@ -383,7 +383,7 @@ function by_link( field, value ) {
                 <th>Director</th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: by_link( 'name', '$_->{person_id}' )" %><br />
+                    <%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
@@ -391,7 +391,7 @@ function by_link( field, value ) {
                 <th>Writer</th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: by_link( 'name', '$_->{person_id}' )" %><br />
+                    <%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %><br />
                 <% } %>
                 </td>
               </tr>
