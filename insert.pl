@@ -30,7 +30,7 @@ while (my $filename = <STDIN>) {
         $mech->get( $url . $term );
         $titles->insert_one({
             filename    => $filename,
-            term        => canonicalize( $filename ),
+            term        => $term,
             search      => $mech->content,
         });
         sleep int rand(4);
