@@ -378,7 +378,7 @@ function by_link( field, value ) {
 <table width="100%"><tr><td>
     <nav aria-label="Sort navigation">
       <ul class="pagination">
-         <li class="disabled"><a>Order by:</a></li>
+         <li class="disabled"><a>Sort:</a></li>
          <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
               <a href="javascript: sort_by( 'sort' );">Title &#x25B2;</a>
          </li>
@@ -398,7 +398,7 @@ function by_link( field, value ) {
 
     <nav aria-label="Per navigation">
       <ul class="pagination">
-         <li class="disabled"><a>Results per page:</a></li>
+          <li class="disabled"><a>Per:</a></li>
         <% for my $number (10,25,50,100,200) { %>
           <li class="<%= $number == $per ? 'active' : '' %>">
               <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
