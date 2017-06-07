@@ -9,7 +9,7 @@ use Data::SpreadPagination;
 use lib 'lib';
 use MovieUtil qw( get_dbh );
 
-my $PER_PAGE = 20;
+my $PER_PAGE = 25;
 my $MAX_PAGE = 10;
 
 my $dbh = get_dbh();
@@ -278,13 +278,13 @@ __DATA__
                 </select>
 
                 <div class="btn-group" data-toggle="buttons">
-                  <label onclick="javascript: toggle('pre')" class="btn btn-default active"><input type="checkbox" checked="1" />%</label>
+                  <label onclick="javascript: toggle('pre')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
                 </div>
 
                 <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" />
 
                 <div class="btn-group" data-toggle="buttons">
-                  <label onclick="javascript: toggle('post')" class="btn btn-default active"><input type="checkbox" checked="1" />%</label>
+                  <label onclick="javascript: toggle('post')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
                 </div>
 
                 <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
@@ -351,8 +351,10 @@ function by_link( field, value ) {
     document.search.query.value = value;
     fetch_results();
 }
-
 </script>
+
+<h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
+
 <nav aria-label="Page navigation">
     <ul class="pagination">
         <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
@@ -373,25 +375,39 @@ function by_link( field, value ) {
     </ul>
 </nav>
 
-<h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
+<table width="100%"><tr><td>
+    <nav aria-label="Sort navigation">
+      <ul class="pagination">
+         <li class="disabled"><a>Order by:</a></li>
+         <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'sort' );">Title &#x25B2;</a>
+         </li>
+         <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'sortD' );">Title &#x25BC;</a>
+         </li>
+         <li class="<%= $sort eq 'year' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'year' );">Year &#x25B2;</a>
+         </li>
+         <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'yearD' );">Year &#x25BC;</a>
+         </li>
+      </ul>
+    </nav>
 
-<nav aria-label="Sort navigation">
-  <ul class="pagination">
-     <li class="disabled"><a>Order by:</a></li>
-     <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
-          <a href="javascript: sort_by( 'sort' );">Title &#x25B2;</a>
-     </li>
-     <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
-          <a href="javascript: sort_by( 'sortD' );">Title &#x25BC;</a>
-     </li>
-     <li class="<%= $sort eq 'year' ? 'active' : '' %>">
-          <a href="javascript: sort_by( 'year' );">Year &#x25B2;</a>
-     </li>
-     <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
-          <a href="javascript: sort_by( 'yearD' );">Year &#x25BC;</a>
-     </li>
-  </ul>
-</nav>
+</td><td align="right">
+
+    <nav aria-label="Per navigation">
+      <ul class="pagination">
+         <li class="disabled"><a>Results per page:</a></li>
+        <% for my $number (10,25,50,100,200) { %>
+          <li class="<%= $number == $per ? 'active' : '' %>">
+              <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+
+</td></tr></table>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
 <% for my $i (0 .. $#$titles) { %>
@@ -477,14 +493,3 @@ function by_link( field, value ) {
   </div>
 <% } %>
 </div>
-
-<nav aria-label="Per navigation">
-  <ul class="pagination">
-     <li class="disabled"><a>Results per page:</a></li>
-    <% for my $number (10,20,50,100,200) { %>
-      <li class="<%= $number == $per ? 'active' : '' %>">
-          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
-      </li>
-    <% } %>
-  </ul>
-</nav>
