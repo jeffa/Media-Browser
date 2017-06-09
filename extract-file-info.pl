@@ -69,8 +69,7 @@ for my $file (@files) {
     $rel{audio_bit_mode}    = $audio->{Bit_rate_mode}[0];
     $rel{audio_channels}    = $audio->{Channel_s_}[0];
 
-    #print encode_json( \%rel ), $/;
-    print Dumper \%rel;
+    print encode_json( \%rel ), $/;
 }
 
 __END__
