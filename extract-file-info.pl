@@ -6,20 +6,37 @@ use Getopt::Long;
 use Data::Dumper;
 
 use JSON;
-use MP4::Info;
 use XML::Simple;
+use File::Slurp;
 use File::Find::Rule;
+
+use lib 'lib';
+use MovieUtil qw( get_dbh );
 
 GetOptions (
     'dir=s'     => \my $dir,
     'file=s'    => \my @file,
-    'limit=i'   => \my $limit,
+    'input=s'   => \my $input,
     'help'      => \my $help,
     'man'       => \my $man,
 );
 
 pod2usage( -verbose => 0 ) if $help;
 pod2usage( -verbose => 2 ) if $man;
+
+if ($input) {
+    pod2usage unless -r $input;
+    my $dbh = get_dbh();
+
+    for my $line (read_file( $input )) {
+        my $data = decode_json( $line );
+        my $sth = $dbh->selectall_arrayref('select * from files where file_name = ?', undef, $data->{file_name});
+        print Dumper $sth;
+        last;
+    }
+
+    exit;
+}
 
 my @files;
 if ($dir) {
