@@ -116,11 +116,10 @@ get '/fetch' => sub {
                 SELECT file_name,
                     display_size as actual_size,
                     duration as actual_duration,
-                    f.ratio as actual_ratio,
+                    ratio as actual_ratio,
                     height, width, frame_rate
-                FROM files f
-                INNER JOIN titles t ON f.title_id=t.title_id
-                WHERE t.title_id = ?
+                FROM files
+                WHERE title_id = ?
             ', {Slice=>{}}, $_->{title_id} )
         ;
 
@@ -431,21 +430,17 @@ function by_link( field, value ) {
             <table class="table-striped details">
               <tr>
                 <th>IMDB ID</th>
-                <td><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></td>
-              </tr>
-              <tr>
-                <th>Filenames</th>
-                <td><%== join('<br/>', map $_->{file_name}, @{ $obj->{files} || [] }) %></td>
+                <td><span class="badge alert-success"><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></span></td>
               </tr>
               <tr>
                 <th>Year</th>
-                <td><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></td>
+                <td><span class="badge alert-success"><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></span></td>
               </tr>
               <tr>
                 <th>Director</th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %><br />
+                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
@@ -453,40 +448,79 @@ function by_link( field, value ) {
                 <th>Writer</th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
-                    <%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %><br />
+                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
               <tr>
                 <th>Genre</th>
                 <td>
-                <% for (@{$obj->{genres} || []}) { %>
-                    <%= link_to $_->{genre_name} => "javascript: by_link( 'genre', '$_->{genre_id}' )" %><br />
+                <% for (sort { $a->{genre_name} cmp $b->{genre_name} } @{$obj->{genres} || []}) { %>
+                    <span class="badge alert-success"><%= link_to ucfirst($_->{genre_name}) => "javascript: by_link( 'genre', '$_->{genre_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
               <tr>
                 <th>Duration</th>
-                <td><%= join(', ', @{ $obj->{durations} || [] }) %></td>
+                <td>
+                <% for (@{$obj->{durations} || []}) { %>
+                    <span class="badge alert-warning"><%= $_ %></span>
+                <% } %>
+                </td>
               </tr>
               <% if ($obj->{mpaa}) { %>
               <tr>
                 <th>MPAA</th>
-                <td><%= $obj->{mpaa} %></td>
+                <td><span class="badge alert-warning"><%= $obj->{mpaa} %></span></td>
               </tr>
               <% } %>
               <% if ($obj->{kind}) { %>
               <tr>
                 <th>Kind</th>
-                <td><%= $obj->{kind} %></td>
+                <td><span class="badge alert-warning"><%= $obj->{kind} %></span></td>
               </tr>
               <% } %>
               <% if ($obj->{ratio}) { %>
               <tr>
                 <th>Ratio</th>
-                <td><%= $obj->{ratio} %></td>
+                <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
               </tr>
               <% } %>
+
+            <% for (@{$obj->{files} || []}) { %>
+              <tr>
+                <th>Filename</th>
+                <td><span class="badge alert-success"><%= $_->{file_name} %></span></td>
+              </tr>
+              <tr>
+                <td>&nbsp;</td>
+                <td>
+                    <table class="table-striped details">
+                      <tr>
+                        <th>Filesize</th>
+                        <td><span class="badge alert-warning"><%= $_->{actual_size} %></span></td>
+                      </tr>
+                      <tr>
+                        <th>Duration</th>
+                        <td><span class="badge alert-warning"><%= $_->{actual_duration} %></span></td>
+                      </tr>
+                      <tr>
+                        <th>Ratio</th>
+                        <td><span class="badge alert-warning"><%= $_->{actual_ratio} %></span></td>
+                      </tr>
+                      <tr>
+                        <th>Dimension</th>
+                        <td><span class="badge alert-warning"><%= join 'x', $_->{width}, $_->{height} %></span></td>
+                      </tr>
+                      <tr>
+                        <th>FrameRate</th>
+                        <td><span class="badge alert-warning"><%= $_->{frame_rate} %></span></td>
+                      </tr>
+                    </table>
+                </td>
+              </tr>
+            <% } %>
+
             </table>
         </td><td align="right" valign="top">
             <img src="<%= $obj->{cover} %>" />
