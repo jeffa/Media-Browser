@@ -329,17 +329,22 @@ function step_right() {
 }
 
 function step_up() {
+    $( '.panel-collapse' ).collapse( 'hide' );
     if (curr < 1) return;
-    curr--;
-    $( '#collapse-' + panes[curr+1] ).collapse( 'hide' );
-    $( '#collapse-' + panes[curr] ).collapse( 'show' );
+    $( '#collapse-' + panes[--curr] ).collapse( 'show' );
 }
 
 function step_down() {
+    $( '.panel-collapse' ).collapse( 'hide' );
     if (curr >= <%= $#$titles %>) return;
-    curr++;
-    $( '#collapse-' + panes[curr-1] ).collapse( 'hide' );
-    $( '#collapse-' + panes[curr] ).collapse( 'show' );
+    $( '#collapse-' + panes[++curr] ).collapse( 'show' );
+}
+
+function step_here( new_curr ) {
+    if (new_curr > <%= $#$titles %>) return;
+    if (new_curr < 0) return;
+    $( '.panel-collapse' ).collapse( 'hide' );
+    curr = new_curr;
 }
 
 function sort_by( field ) {
@@ -418,7 +423,7 @@ function by_link( field, value ) {
   <div class="panel panel-default">
     <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
       <h6 class="panel-title">
-        <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
+        <a onclick="javascript: step_here(<%= $i %>)" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
             <%= $obj->{title} %> (<%= $obj->{year} %>)
         </a>
       </h4>
