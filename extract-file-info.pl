@@ -30,9 +30,55 @@ if ($input) {
 
     for my $line (read_file( $input )) {
         my $data = decode_json( $line );
-        my $sth = $dbh->selectall_arrayref('select * from files where file_name = ?', undef, $data->{file_name});
-        print Dumper $sth;
-        last;
+
+        my ($title_id) = map $_->[0], $dbh->selectall_array('select * from files where file_name = ?', undef, $data->{file_name});
+        unless ($title_id) {
+            warn sprintf "No match for %s\n", $data->{file_name};
+            next;
+        }
+
+        $dbh->do('
+            UPDATE files SET
+                file_size           = ?,
+                source              = ?,
+                ratio               = ?,
+                height              = ?,
+                width               = ?,
+                frame_rate          = ?,
+                bit_rate            = ?,
+                codec               = ?,
+                display_size        = ?,
+                duration            = ?,
+                format              = ?,
+                scan_type           = ?,
+                version             = ?,
+                audio_bit_mode      = ?,
+                audio_bit_rate      = ?,
+                audio_channels      = ?,
+                audio_format        = ?,
+                audio_sample_rate   = ?
+            WHERE TITLE_ID = ?
+        ', undef,
+            $data->{file_size},
+            $data->{source},
+            $data->{ratio},
+            $data->{height},
+            $data->{width},
+            $data->{frame_rate},
+            $data->{bit_rate},
+            $data->{codec},
+            $data->{display_size},
+            $data->{duration},
+            $data->{format},
+            $data->{scan_type},
+            $data->{version},
+            $data->{audio_bit_mode},
+            $data->{audio_bit_rate},
+            $data->{audio_channels},
+            $data->{audio_format},
+            $data->{audio_sample_rate},
+            $title_id
+        );
     }
 
     exit;

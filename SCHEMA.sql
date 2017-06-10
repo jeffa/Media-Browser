@@ -23,9 +23,29 @@ CREATE TABLE files(
     file_id         SERIAL PRIMARY KEY,
     file_name       VARCHAR(128) NOT NULL,
     title_id        bigint(20) unsigned NOT NULL,
+    file_size       bigint(8) unsigned,
+    source          VARCHAR(160),
+    ratio           VARCHAR(12),
+    height          smallint(2) unsigned,
+    width           smallint(2) unsigned,
+    frame_rate      VARCHAR(8),
+    bit_rate        bigint(8) unsigned,
+    codec           VARCHAR(24),
+    display_size    VARCHAR(16),
+    duration        VARCHAR(12),
+    format          VARCHAR(16),
+    scan_type       VARCHAR(16),
+    version         VARCHAR(32),
+    audio_bit_mode  VARCHAR(4),
+    audio_bit_rate  mediumint(3),
+    audio_channels  VARCHAR(12),
+    audio_format    VARCHAR(12),
+    audio_sample_rate VARCHAR(24),
     UNIQUE KEY file_name (file_name)
 );
 CREATE INDEX files_idx_title_id ON files( title_id );
+CREATE INDEX files_idx_file_size ON files( file_size );
+
 
 CREATE TABLE genres(
     genre_id        SERIAL PRIMARY KEY,
