@@ -111,14 +111,18 @@ get '/fetch' => sub {
 
     for (@$titles) {
 
-        $_->{files} = [
-            map $_->[0], $dbh->selectall_array('
-                SELECT file_name
+        $_->{files} = 
+            $dbh->selectall_arrayref('
+                SELECT file_name,
+                    display_size as actual_size,
+                    duration as actual_duration,
+                    f.ratio as actual_ratio,
+                    height, width, frame_rate
                 FROM files f
                 INNER JOIN titles t ON f.title_id=t.title_id
                 WHERE t.title_id = ?
-            ', undef, $_->{title_id} )
-        ];
+            ', {Slice=>{}}, $_->{title_id} )
+        ;
 
         $_->{durations} = [
             map $_->[0], $dbh->selectall_array('
@@ -431,7 +435,7 @@ function by_link( field, value ) {
               </tr>
               <tr>
                 <th>Filenames</th>
-                <td><%== join('<br/>', @{ $obj->{files} || [] }) %></td>
+                <td><%== join('<br/>', map $_->{file_name}, @{ $obj->{files} || [] }) %></td>
               </tr>
               <tr>
                 <th>Year</th>
