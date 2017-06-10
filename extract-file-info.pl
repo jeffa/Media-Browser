@@ -31,8 +31,8 @@ if ($input) {
     for my $line (read_file( $input )) {
         my $data = decode_json( $line );
 
-        my ($title_id) = map $_->[0], $dbh->selectall_array('select * from files where file_name = ?', undef, $data->{file_name});
-        unless ($title_id) {
+        my ($file_id) = map $_->[0], $dbh->selectall_array('select file_id from files where file_name = ?', undef, $data->{file_name});
+        unless ($file_id) {
             warn sprintf "No match for %s\n", $data->{file_name};
             next;
         }
@@ -57,7 +57,7 @@ if ($input) {
                 audio_channels      = ?,
                 audio_format        = ?,
                 audio_sample_rate   = ?
-            WHERE TITLE_ID = ?
+            WHERE file_id = ?
         ', undef,
             $data->{file_size},
             $data->{source},
@@ -77,7 +77,7 @@ if ($input) {
             $data->{audio_channels},
             $data->{audio_format},
             $data->{audio_sample_rate},
-            $title_id
+            $file_id
         );
     }
 
