@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
+use Time::Piece;
 use Mojolicious::Lite;
 use Data::SpreadPagination;
 
@@ -123,6 +124,12 @@ get '/fetch' => sub {
             ', {Slice=>{}}, $_->{title_id} )
         ;
 
+        for my $i (0 .. $#{ $_->{files} }) {
+            # 01:51:36.960
+            my $time = substr( $_->{files}[$i]{actual_duration}, 0, 8 );
+            $_->{files}[$i]{actual_duration} = int( Time::Piece->strptime( $time, '%T' )->epoch / 60 ) . ' min';
+        }
+
         $_->{durations} = [
             map $_->[0], $dbh->selectall_array('
                 SELECT duration
@@ -193,6 +200,7 @@ __DATA__
     <style type="text/css">
         table.details { padding: 10; }
         table.details th { width: 15%; vertical-align: top; }
+        a   { color: #333 }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
@@ -465,14 +473,6 @@ function by_link( field, value ) {
                 <% } %>
                 </td>
               </tr>
-              <tr>
-                <th>Duration</th>
-                <td>
-                <% for (@{$obj->{durations} || []}) { %>
-                    <span class="badge alert-warning"><%= $_ %></span>
-                <% } %>
-                </td>
-              </tr>
               <% if ($obj->{mpaa}) { %>
               <tr>
                 <th>MPAA</th>
@@ -485,6 +485,14 @@ function by_link( field, value ) {
                 <td><span class="badge alert-warning"><%= $obj->{kind} %></span></td>
               </tr>
               <% } %>
+              <tr>
+                <th>Duration</th>
+                <td>
+                <% for (@{$obj->{durations} || []}) { %>
+                    <span class="badge alert-warning"><%= $_ %></span>
+                <% } %>
+                </td>
+              </tr>
               <% if ($obj->{ratio}) { %>
               <tr>
                 <th>Ratio</th>
@@ -502,10 +510,6 @@ function by_link( field, value ) {
                 <td>
                     <table class="table-striped details">
                       <tr>
-                        <th>Filesize</th>
-                        <td><span class="badge alert-warning"><%= $_->{actual_size} %></span></td>
-                      </tr>
-                      <tr>
                         <th>Duration</th>
                         <td><span class="badge alert-warning"><%= $_->{actual_duration} %></span></td>
                       </tr>
@@ -516,6 +520,10 @@ function by_link( field, value ) {
                       <tr>
                         <th>Dimension</th>
                         <td><span class="badge alert-warning"><%= join 'x', $_->{width}, $_->{height} %></span></td>
+                      </tr>
+                      <tr>
+                        <th>Filesize</th>
+                        <td><span class="badge alert-warning"><%= $_->{actual_size} %></span></td>
                       </tr>
                       <tr>
                         <th>FrameRate</th>
