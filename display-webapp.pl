@@ -262,26 +262,26 @@ __DATA__
 var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
 var curr  = 0;
 
-        function set_results_per( per ) {
-            document.search.per.value = per;
-            fetch_results();
-        }
+function set_results_per( per ) {
+    document.search.per.value = per;
+    fetch_results();
+}
 
-        function fetch_results( curr = 1 ) {
+function fetch_results( curr = 1 ) {
 
-            var params = $.param([
-                {name: "curr",      value: curr},
-                {name: "field",     value: document.search.field.value},
-                {name: "query",     value: document.search.query.value},
-                {name: "per",       value: document.search.per.value},
-                {name: "pre",       value: document.search.pre.value},
-                {name: "post",      value: document.search.post.value},
-                {name: "sort",      value: document.search.sort.value}
-            ]);
+    var params = $.param([
+        {name: "curr",      value: curr},
+        {name: "field",     value: document.search.field.value},
+        {name: "query",     value: document.search.query.value},
+        {name: "per",       value: document.search.per.value},
+        {name: "pre",       value: document.search.pre.value},
+        {name: "post",      value: document.search.post.value},
+        {name: "sort",      value: document.search.sort.value}
+    ]);
 
-            var url  = '/fetch?' + params;
-            _ajaxGET( url, '#results' );
-        }
+    var url  = '/fetch?' + params;
+    _ajaxGET( url, '#results' );
+}
 
 function toggle( param ) {
     var value = $( '#' + param ).val();
@@ -333,66 +333,31 @@ function by_link( field, value ) {
 }
 </script>
 
-    <div class="container-fluid">
-      <div class="row">
-        <div id="content" class="col-md-7">
+<div class="container-fluid">
+  <div class="row">
+    <div id="content" class="col-md-7">
 
 
-<h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
+    <h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
 
-<nav aria-label="Page navigation">
-    <ul class="pagination">
-        <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
-            <a href="javascript: step_left();">&laquo;</a>
-        </li>
-    <% for my $number ($pager->pages_in_spread) { %>
-        <% if ($number) { %>
-        <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
-            <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
-        </li>
-        <% } else { %>
-        <li class="disabled"><a href="javascript:void">...</a></li>
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
+                <a href="javascript: step_left();">&laquo;</a>
+            </li>
+        <% for my $number ($pager->pages_in_spread) { %>
+            <% if ($number) { %>
+            <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
+                <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
+            </li>
+            <% } else { %>
+            <li class="disabled"><a href="javascript:void">...</a></li>
+            <% } %>
         <% } %>
-    <% } %>
-        <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
-            <a href="javascript: step_right();">&raquo;</a>
-        </li>
-    </ul>
-</nav>
-
-    <nav aria-label="Sort navigation">
-      <ul class="pagination">
-         <li class="disabled"><a>Title</a></li>
-         <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'sort' );">&#x25B2;</a>
-         </li>
-         <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'sortD' );">&#x25BC;</a>
-         </li>
-      </ul>
-      <ul class="pagination">
-         <li class="disabled"><a>Year</a></li>
-         <li class="<%= $sort eq 'year' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'year' );">&#x25B2;</a>
-         </li>
-         <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'yearD' );">&#x25BC;</a>
-         </li>
-      </ul>
-      <ul class="pagination">
-         <li class="disabled"><a>Added</a></li>
-         <li class="<%= $sort eq 'added' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'added' );">&#x25BC;</a>
-         </li>
-      </ul>
-      <ul class="pagination">
-          <li class="disabled"><a>Per Page:</a></li>
-        <% for my $number (10,25,50,100,200) { %>
-          <li class="<%= $number == $per ? 'active' : '' %>">
-              <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
-          </li>
-        <% } %>
-      </ul>
+            <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
+                <a href="javascript: step_right();">&raquo;</a>
+            </li>
+        </ul>
     </nav>
 
 
@@ -524,38 +489,79 @@ function by_link( field, value ) {
 
 
 
-        </div>
-        <div class="col-md-5">
-            <br />
-            <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
-
-                <select name="field" class="form-control">
-                  <option value="sort">Title</option>
-                  <option value="year">Year</option>
-                  <option value="genre">Genre</option>
-                  <option value="person">Person</option>
-                </select>
-
-                <div class="btn-group" data-toggle="buttons">
-                  <label onclick="javascript: toggle('pre')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
-                </div>
-
-                <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" />
-
-                <div class="btn-group" data-toggle="buttons">
-                  <label onclick="javascript: toggle('post')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
-                </div>
-
-                <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
-
-                <input id="curr" name="curr" type="hidden" />
-                <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
-                <input id="pre"  name="pre"  type="hidden" value="1" />
-                <input id="post" name="post" type="hidden" value="1" />
-                <input id="sort" name="sort" type="hidden" value="sort" />
-
-            </form>
-
-        </div>
-      </div>
     </div>
+    <div class="col-md-5">
+        <br />
+        <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
+
+            <select name="field" class="form-control">
+              <option value="sort">Title</option>
+              <option value="year">Year</option>
+              <option value="genre">Genre</option>
+              <option value="person">Person</option>
+            </select>
+
+            <div class="btn-group" data-toggle="buttons">
+              <label onclick="javascript: toggle('pre')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
+            </div>
+
+            <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" />
+
+            <div class="btn-group" data-toggle="buttons">
+              <label onclick="javascript: toggle('post')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
+            </div>
+
+            <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
+
+            <input id="curr" name="curr" type="hidden" />
+            <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
+            <input id="pre"  name="pre"  type="hidden" value="1" />
+            <input id="post" name="post" type="hidden" value="1" />
+            <input id="sort" name="sort" type="hidden" value="sort" />
+
+        </form>
+
+        <p>&nbsp</p>
+        <p>&nbsp</p>
+
+        <nav aria-label="Sort navigation">
+          <ul class="pagination">
+             <li class="disabled"><a>Title</a></li>
+             <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
+                  <a href="javascript: sort_by( 'sort' );">&#x25B2;</a>
+             </li>
+             <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
+                  <a href="javascript: sort_by( 'sortD' );">&#x25BC;</a>
+             </li>
+          </ul>
+          <ul class="pagination">
+             <li class="disabled"><a>Year</a></li>
+             <li class="<%= $sort eq 'year' ? 'active' : '' %>">
+                  <a href="javascript: sort_by( 'year' );">&#x25B2;</a>
+             </li>
+             <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
+                  <a href="javascript: sort_by( 'yearD' );">&#x25BC;</a>
+             </li>
+          </ul>
+          <ul class="pagination">
+             <li class="disabled"><a>Added</a></li>
+             <li class="<%= $sort eq 'added' ? 'active' : '' %>">
+                  <a href="javascript: sort_by( 'added' );">&#x25BC;</a>
+             </li>
+          </ul>
+        </nav>
+
+        <nav aria-label="Sort navigation">
+          <ul class="pagination">
+              <li class="disabled"><a>Per Page:</a></li>
+            <% for my $number (10,25,50,100,200) { %>
+              <li class="<%= $number == $per ? 'active' : '' %>">
+                  <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+              </li>
+            <% } %>
+          </ul>
+        </nav>
+
+    </div>
+  </div>
+</div>
