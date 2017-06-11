@@ -104,6 +104,8 @@ get '/fetch' => sub {
         $order_by = 'sort DESC, year';
     } elsif ($sort eq 'yearD') {
         $order_by = 'year DESC, sort';
+    } elsif ($sort eq 'added') {
+        $order_by = 'title_id DESC';
     }
 
     $sql = sprintf 'SELECT * FROM titles %s ORDER BY %s LIMIT %d,%d', $predicate, $order_by, $pager->first - 1, $per;
@@ -118,7 +120,7 @@ get '/fetch' => sub {
                     display_size as actual_size,
                     duration as actual_duration,
                     ratio as actual_ratio,
-                    height, width, frame_rate
+                    height, width, frame_rate, source
                 FROM files
                 WHERE title_id = ?
             ', {Slice=>{}}, $_->{title_id} )
@@ -391,30 +393,33 @@ function by_link( field, value ) {
     </ul>
 </nav>
 
-<table width="100%"><tr><td>
     <nav aria-label="Sort navigation">
       <ul class="pagination">
-         <li class="disabled"><a>Sort:</a></li>
+         <li class="disabled"><a>Title</a></li>
          <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'sort' );">Title &#x25B2;</a>
+              <a href="javascript: sort_by( 'sort' );">&#x25B2;</a>
          </li>
          <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'sortD' );">Title &#x25BC;</a>
-         </li>
-         <li class="<%= $sort eq 'year' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'year' );">Year &#x25B2;</a>
-         </li>
-         <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
-              <a href="javascript: sort_by( 'yearD' );">Year &#x25BC;</a>
+              <a href="javascript: sort_by( 'sortD' );">&#x25BC;</a>
          </li>
       </ul>
-    </nav>
-
-</td><td align="right">
-
-    <nav aria-label="Per navigation">
       <ul class="pagination">
-          <li class="disabled"><a>Per:</a></li>
+         <li class="disabled"><a>Year</a></li>
+         <li class="<%= $sort eq 'year' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'year' );">&#x25B2;</a>
+         </li>
+         <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'yearD' );">&#x25BC;</a>
+         </li>
+      </ul>
+      <ul class="pagination">
+         <li class="disabled"><a>Added</a></li>
+         <li class="<%= $sort eq 'added' ? 'active' : '' %>">
+              <a href="javascript: sort_by( 'added' );">&#x25BC;</a>
+         </li>
+      </ul>
+      <ul class="pagination">
+          <li class="disabled"><a>Per Page:</a></li>
         <% for my $number (10,25,50,100,200) { %>
           <li class="<%= $number == $per ? 'active' : '' %>">
               <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
@@ -423,7 +428,6 @@ function by_link( field, value ) {
       </ul>
     </nav>
 
-</td></tr></table>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
 <% for my $i (0 .. $#$titles) { %>
@@ -529,6 +533,12 @@ function by_link( field, value ) {
                         <th>FrameRate</th>
                         <td><span class="badge alert-warning"><%= $_->{frame_rate} %></span></td>
                       </tr>
+                    <% if ($_->{source}) { %>
+                      <tr>
+                        <th>Source</th>
+                        <td><span class="badge alert-warning"><%= (split( /\./, $_->{source}, 2 ))[0] %></span></td>
+                      </tr>
+                    <% } %>
                     </table>
                 </td>
               </tr>
