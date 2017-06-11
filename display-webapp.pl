@@ -105,11 +105,10 @@ get '/fetch' => sub {
     } elsif ($sort eq 'yearD') {
         $order_by = 'year DESC, sort';
     } elsif ($sort eq 'added') {
-        $order_by = 'title_id DESC';
+        $order_by = 'titles.title_id DESC';
     }
 
     $sql = sprintf 'SELECT * FROM titles %s ORDER BY %s LIMIT %d,%d', $predicate, $order_by, $pager->first - 1, $per;
-    warn "$sql\n";
     my $titles = $dbh->selectall_arrayref( $sql, {Slice=>{}}, @vars );
 
     for (@$titles) {
@@ -181,8 +180,12 @@ get '/fetch' => sub {
         pager  => $pager,
         total  => $total->[0] || 'No',
         per    => $per,
+        pre    => $pre,
+        post   => $post,
         curr   => $curr,
-        sort   => $sort,
+        sort   => $sort || 'sort',
+        query  => $query,
+        sql    => $sql,
     );
 
     $self->render( template => 'results' );
@@ -262,13 +265,7 @@ __DATA__
 var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
 var curr  = 0;
 
-function set_results_per( per ) {
-    document.search.per.value = per;
-    fetch_results();
-}
-
 function fetch_results( curr = 1 ) {
-
     var params = $.param([
         {name: "curr",      value: curr},
         {name: "field",     value: document.search.field.value},
@@ -281,6 +278,11 @@ function fetch_results( curr = 1 ) {
 
     var url  = '/fetch?' + params;
     _ajaxGET( url, '#results' );
+}
+
+function set_results_per( per ) {
+    document.search.per.value = per;
+    fetch_results();
 }
 
 function toggle( param ) {
@@ -337,8 +339,7 @@ function by_link( field, value ) {
   <div class="row">
     <div id="content" class="col-md-7">
 
-
-    <h2><%= $total %> titles found (<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</h2>
+    <h2><%= $total %> titles found <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small></h2>
 
     <nav aria-label="Page navigation">
         <ul class="pagination">
@@ -437,9 +438,11 @@ function by_link( field, value ) {
               <% } %>
 
             <% for (@{$obj->{files} || []}) { %>
+              <% my $f = $_->{file_name}; %>
+              <% my $s = substr( $f, 0, 60 ); %>
               <tr>
                 <th>Filename</th>
-                <td><span class="badge alert-success"><%= $_->{file_name} %></span></td>
+                <td><span class="badge alert-warning"><% if ($f eq $s) { %><%= $f %><% } else { %><abbr title="<%= $f %>"><%= $s %></abbr><% } %></span></td>
               </tr>
               <tr>
                 <td>&nbsp;</td>
@@ -478,7 +481,7 @@ function by_link( field, value ) {
 
             </table>
         </td><td align="right" valign="top">
-            <img src="<%= $obj->{cover} %>" />
+            <img class="img-thumbnail" src="<%= $obj->{cover} %>" />
         </td></tr></table>
 
       </div>
@@ -505,7 +508,7 @@ function by_link( field, value ) {
               <label onclick="javascript: toggle('pre')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
             </div>
 
-            <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" />
+            <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
 
             <div class="btn-group" data-toggle="buttons">
               <label onclick="javascript: toggle('post')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
@@ -517,7 +520,7 @@ function by_link( field, value ) {
             <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
             <input id="pre"  name="pre"  type="hidden" value="1" />
             <input id="post" name="post" type="hidden" value="1" />
-            <input id="sort" name="sort" type="hidden" value="sort" />
+            <input id="sort" name="sort" type="hidden" value="<%= $sort %>" />
 
         </form>
 
@@ -561,6 +564,34 @@ function by_link( field, value ) {
             <% } %>
           </ul>
         </nav>
+
+        <% if ($sql) { %>
+        <samp><%= $sql %></samp>
+        <% } %>
+
+        <pre>
+        query  => <%= $query %>
+        per    => <%= $per %>
+        curr   => <%= $curr %>
+        sort   => <%= $sort %>
+        pre    => <%= $pre %>
+        post   => <%= $post %>
+        </pre>
+
+
+<!--
+<form class="form-inline">
+  <div class="form-group">
+    <label class="sr-only" for="exampleInputAmount">Amount (in dollars)</label>
+    <div class="input-group">
+      <div class="input-group-addon">$</div>
+      <input type="text" class="form-control" id="exampleInputAmount" placeholder="Amount">
+      <div class="input-group-addon">.00</div>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary">Transfer cash</button>
+</form>
+-->
 
     </div>
   </div>
