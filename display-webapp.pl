@@ -19,22 +19,21 @@ my %valid_fields = map {( $_ => 1 )} qw( sort year genre person );
 
 get '/' => sub {
     my $self = shift;
-    $self->stash( per => $PER_PAGE );
     $self->render( template => 'index' );
 };
 
 get '/fetch' => sub {
     my $self = shift;
-    my $curr = int( $self->param( 'curr' ) ) || 1;
-    my $per  = int( $self->param( 'per'  ) ) || $PER_PAGE;
-    my $query = $self->param( 'query' );
-    my $field = $self->param( 'field' );
+    my $curr = int( $self->param( 'curr' ) || 0 ) || 1;
+    my $per  = int( $self->param( 'per'  ) || 0 ) || $PER_PAGE;
+    my $query = $self->param( 'query' ) || '';
+    my $field = $self->param( 'field' ) || '';
+    my $sort  = $self->param( 'sort' )  || '';
     my $pre   = $self->param( 'pre' );
     my $post  = $self->param( 'post' );
-    my $sort  = $self->param( 'sort' );
 
+    $query =~ s/;//g;
     $field = 'sort' unless $valid_fields{$field};
-    warn "field = $field\n";
 
     unless ($dbh->ping) {
         warn "Re-obtaing DB handle\n";
@@ -92,7 +91,18 @@ get '/fetch' => sub {
     });
 
     unless ($total->[0]) {
-        $self->stash( titles => [], pager => $pager, total => 'No', per => $per, curr => $curr );
+        $self->stash(
+            titles => [],
+            pager  => $pager,
+            total  => 'No',
+            per    => $per,
+            pre    => defined($pre)  ? $pre  : 1,
+            post   => defined($post) ? $post : 1,
+            curr   => $curr,
+            sort   => $sort || 'sort',
+            query  => $query,
+            sql    => $sql,
+        );
         $self->render( template => 'results' );
         return;
     }
@@ -178,10 +188,10 @@ get '/fetch' => sub {
     $self->stash(
         titles => $titles,
         pager  => $pager,
-        total  => $total->[0] || 'No',
+        total  => $total->[0],
         per    => $per,
-        pre    => $pre,
-        post   => $post,
+        pre    => defined($pre)  ? $pre  : 1,
+        post   => defined($post) ? $post : 1,
         curr   => $curr,
         sort   => $sort || 'sort',
         query  => $query,
@@ -505,18 +515,18 @@ function by_link( field, value ) {
             </select>
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('pre')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
+              <label onclick="javascript: toggle('pre')" class="btn btn-info <%= $pre ? 'active' : '' %>"><input type="checkbox" />%</label>
             </div>
 
             <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('post')" class="btn btn-info active"><input type="checkbox" checked="1" />%</label>
+              <label onclick="javascript: toggle('post')" class="btn btn-info <%= $post ? 'active' : '' %>"><input type="checkbox" />%</label>
             </div>
 
             <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
 
-            <input id="curr" name="curr" type="hidden" />
+            <input id="curr" name="curr" type="hidden" value="<%= $curr %>" />
             <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
             <input id="pre"  name="pre"  type="hidden" value="1" />
             <input id="post" name="post" type="hidden" value="1" />
