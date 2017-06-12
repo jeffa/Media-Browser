@@ -102,6 +102,7 @@ get '/fetch' => sub {
             sort   => $sort || 'sort',
             query  => $query,
             sql    => $sql,
+            field  => $field,
         );
         $self->render( template => 'results' );
         return;
@@ -196,6 +197,7 @@ get '/fetch' => sub {
         sort   => $sort || 'sort',
         query  => $query,
         sql    => $sql,
+        field  => $field,
     );
 
     $self->render( template => 'results' );
@@ -508,10 +510,9 @@ function by_link( field, value ) {
         <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
             <select name="field" class="form-control">
-              <option value="sort">Title</option>
-              <option value="year">Year</option>
-              <option value="genre">Genre</option>
-              <option value="person">Person</option>
+            <% for my $f (qw( sort year genre person )) { %>
+              <option value="<%= $f %>" <%= $field eq $f ? 'selected="1"' : '' %>><%= $f eq 'sort' ? 'Title' : ucfirst $f %></option>
+            <% } %>
             </select>
 
             <div class="btn-group" data-toggle="buttons">
@@ -526,10 +527,10 @@ function by_link( field, value ) {
 
             <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
 
-            <input id="curr" name="curr" type="hidden" value="<%= $curr %>" />
-            <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
+            <input id="curr" name="curr" type="hidden" />
             <input id="pre"  name="pre"  type="hidden" value="1" />
             <input id="post" name="post" type="hidden" value="1" />
+            <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
             <input id="sort" name="sort" type="hidden" value="<%= $sort %>" />
 
         </form>
@@ -576,11 +577,12 @@ function by_link( field, value ) {
         </nav>
 
         <% if ($sql) { %>
-        <samp><%= $sql %></samp>
+        <samp><%= ' ' || $sql %></samp>
         <% } %>
 
         <pre>
         query  => <%= $query %>
+        field  => <%= $field %>
         per    => <%= $per %>
         curr   => <%= $curr %>
         sort   => <%= $sort %>
