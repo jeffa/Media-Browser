@@ -4,23 +4,18 @@ use warnings;
 use Data::Dumper;
 
 use lib 'lib';
-use MovieUtil qw( get_raw_titles );
+use MovieUtil qw( get_dbh );
 
-my $titles = get_raw_titles();
+my $dbh = get_dbh();
 
-my $attr = $ARGV[0]
-    ? { imdb_id => shift() }
-    : { content => { '$exists' => 1 }, fullcredits => { '$exists' => 1 }}
-;
+my $id = shift;
+die "Must supply title or IMDb ID\n" unless $id;
+my $field = $id =~ /^tt\d{7}$/ ? 'imdb_id' : 'title_id';
 
-my $iter = $titles->find( $attr, { search => 0, content => 0, fullcredits => 0 } );
+my $sth = $dbh->selectall_arrayref( 
+    "select * from titles where $field = ?",
+    {Slice => {}},
+    $id,
+);
 
-while (my $movie = $iter->next) {
-    print Dumper $movie->{meta};
-}
-
-print $titles->count(), " titles found\n";;
-
-
-# tt0066473 <-- test for unicode (3rd writer)
-# tt1436045 <-- test for unicode title
+print Dumper $sth;
