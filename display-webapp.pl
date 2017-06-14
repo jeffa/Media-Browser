@@ -15,7 +15,7 @@ my $MAX_PAGE = 10;
 
 my $dbh = get_dbh();
 
-my %valid_fields = map {( $_ => 1 )} qw( sort year genre person );
+my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer );
 
 get '/' => sub {
     my $self = shift;
@@ -64,13 +64,26 @@ get '/fetch' => sub {
                                 ($post ? '%' : ''),
                 ;
             }
-        } elsif ($field eq 'person') {
+        } elsif ($field eq 'director') {
             if ($query =~ /^\d+$/) {
-                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE p.person_id = ?';
+                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE x.role_id = 1 and p.person_id = ?';
                 push @vars, $query;
             } else {
                 $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id'
-                            . sprintf ' WHERE p.person_name %s "%s%s%s"', 
+                            . sprintf ' WHERE x.role_id = 1 and p.person_name %s "%s%s%s"', 
+                                ($pre || $post ? 'LIKE' : '='),
+                                ($pre  ? '%' : ''),
+                                $query,
+                                ($post ? '%' : ''),
+                ;
+            }
+        } elsif ($field eq 'writer') {
+            if ($query =~ /^\d+$/) {
+                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE x.role_id = 2 and p.person_id = ?';
+                push @vars, $query;
+            } else {
+                $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id'
+                            . sprintf ' WHERE x.role_id = 2 and p.person_name %s "%s%s%s"', 
                                 ($pre || $post ? 'LIKE' : '='),
                                 ($pre  ? '%' : ''),
                                 $query,
@@ -402,7 +415,7 @@ function by_link( field, value ) {
                 <th>Director</th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
-                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %></span>
+                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'director', '$_->{person_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
@@ -410,7 +423,7 @@ function by_link( field, value ) {
                 <th>Writer</th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
-                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'person', '$_->{person_id}' )" %></span>
+                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'writer', '$_->{person_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
@@ -510,7 +523,7 @@ function by_link( field, value ) {
         <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
             <select name="field" class="form-control">
-            <% for my $f (qw( sort year genre person )) { %>
+            <% for my $f (qw( sort year genre director writer )) { %>
               <option value="<%= $f %>" <%= $field eq $f ? 'selected="1"' : '' %>><%= $f eq 'sort' ? 'Title' : ucfirst $f %></option>
             <% } %>
             </select>
