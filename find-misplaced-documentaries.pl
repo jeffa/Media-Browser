@@ -26,8 +26,8 @@ for my $title_id (@docs) {
         SELECT file_id, file_name
         FROM files
         WHERE title_id = ?
-        AND file_name LIKE ?
-    ', undef, $title_id, '/Volumes/MOVIES/%' );
+        AND (file_name LIKE ? OR file_name LIKE ?)
+    ', undef, $title_id, '/Volumes/MOVIES/%', '/Volumes/DROBO2/BACKLOG/%' );
 
     next unless @$files;
     printf "%s,%s\n", @$_ for @$files;
