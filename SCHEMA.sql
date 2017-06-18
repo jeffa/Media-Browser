@@ -98,3 +98,18 @@ CREATE TABLE durations(
     UNIQUE KEY title_duration (title_id,duration)
 );
 CREATE INDEX durations_idx_title_id ON durations( title_id );
+
+CREATE TABLE tags(
+    tag_id          SERIAL PRIMARY KEY,
+    tag             VARCHAR(64) NOT NULL,
+    UNIQUE KEY tag (tag)
+);
+
+CREATE TABLE tag_xref(
+    tag_xref_id     SERIAL PRIMARY KEY,
+    tag_id          bigint(20) unsigned NOT NULL,
+    title_id        bigint(20) unsigned NOT NULL,
+    UNIQUE KEY title_tag (title_id,tag_id)
+);
+CREATE INDEX tag_tag_id     ON tag_xref( tag_id );
+CREATE INDEX tag_title_id   ON tag_xref( title_id );
