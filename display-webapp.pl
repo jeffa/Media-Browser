@@ -19,7 +19,21 @@ my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer );
 
 get '/' => sub {
     my $self = shift;
+    $self->stash( pre => 1, post => 1 );
     $self->render( template => 'index' );
+};
+
+get '/tags' => sub {
+    my $self = shift;
+    my $title_id = int( $self->param( 'title_id' ) || 0 );
+    my $tags     = lc( $self->param( 'tags' ) || '' );
+
+    my @tags = @{ $dbh->selectcol_arrayref(
+        'SELECT tag FROM tags INNER JOIN tag_xref x ON tags.tag_id=x.tag_id WHERE x.title_id = ?',
+        undef, $title_id
+    ) };
+
+    $self->render( text => join( ' ', @tags ) );
 };
 
 get '/fetch' => sub {
@@ -174,6 +188,15 @@ get '/fetch' => sub {
             ', {Slice=>{}}, $_->{title_id} )
         ;
 
+        $_->{tags} = 
+            $dbh->selectall_arrayref('
+                SELECT tag, t.tag_id
+                FROM tags t
+                INNER JOIN tag_xref x ON t.tag_id=x.tag_id
+                WHERE x.title_id = ?
+            ', {Slice=>{}}, $_->{title_id} )
+        ;
+
         $_->{directors} = 
             $dbh->selectall_arrayref('
                 SELECT p.person_name, p.person_id
@@ -313,6 +336,9 @@ function set_results_per( per ) {
 function toggle( param ) {
     var value = $( '#' + param ).val();
     $( '#' + param ).val( value > 0 ? 0 : 1 );
+    var value = $( '#' + param ).val();
+    $( '#' + param + '-text' ).html( value > 0 ? '%' : '&nbsp;' );
+    $( '#' + param + '-view' ).val( value );
 }
 
 function step_left() {
@@ -357,6 +383,21 @@ function by_link( field, value ) {
     document.search.field.value = field;
     document.search.query.value = value;
     fetch_results();
+}
+
+function edit_tag( title_id, tags ) {
+    $( '#tag-' + title_id ).html(
+        '<input type="text" value="' + tags + '"'
+        + ' onblur="javascript: show_tag(' + title_id + ', this )"'
+        + '/>'
+    );
+}
+
+function show_tag( title_id, input ) {
+    $( '#tag-' + title_id ).html(
+        '<span class="badge alert-success" onclick="javascript: edit_tag( ' + title_id + ', \'foo\' )">foo</span>'
+    );
+    //alert( input.value.split(' ') );
 }
 </script>
 
@@ -461,6 +502,20 @@ function by_link( field, value ) {
                 <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
               </tr>
               <% } %>
+              <% if ($obj->{tags}) { %>
+              <tr>
+                <td>&nbsp;</td>
+                <td colspan="2">
+                    <div id="tag-<%= $obj->{title_id} %>">
+                    <% for (@{$obj->{tags}}) { %>
+                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
+                            <%= $_->{tag} %>
+                        </span>
+                    <% } %>
+                    </div>
+                </td>
+              </tr>
+              <% } %>
 
             <% for (@{$obj->{files} || []}) { %>
               <% my $f = $_->{file_name}; %>
@@ -529,20 +584,24 @@ function by_link( field, value ) {
             </select>
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('pre')" class="btn btn-info <%= $pre ? 'active' : '' %>"><input type="checkbox" />%</label>
+              <label onclick="javascript: toggle('pre')" class="btn btn-info <%= $pre ? 'active' : '' %>">
+                <input type="checkbox" /><div id="pre-text"><%== $pre ? '%' : '&nbsp;' %></div>
+              </label>
             </div>
 
             <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('post')" class="btn btn-info <%= $post ? 'active' : '' %>"><input type="checkbox" />%</label>
+              <label onclick="javascript: toggle('post')" class="btn btn-info <%= $post ? 'active' : '' %>">
+                <input type="checkbox" /><div id="post-text"><%== $post ? '%' : '&nbsp;' %></div>
+              </label>
             </div>
 
             <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
 
             <input id="curr" name="curr" type="hidden" />
-            <input id="pre"  name="pre"  type="hidden" value="1" />
-            <input id="post" name="post" type="hidden" value="1" />
+            <input id="pre"  name="pre"  type="hidden" value="<%= $pre %>" />
+            <input id="post" name="post" type="hidden" value="<%= $post %>" />
             <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
             <input id="sort" name="sort" type="hidden" value="<%= $sort %>" />
 
@@ -594,7 +653,7 @@ function by_link( field, value ) {
         <% } %>
 
         <pre>
-        query  => <%= $query %>
+        query  => <%= $query %> 
         field  => <%= $field %>
         per    => <%= $per %>
         curr   => <%= $curr %>
@@ -602,6 +661,8 @@ function by_link( field, value ) {
         pre    => <%= $pre %>
         post   => <%= $post %>
         </pre>
+        <input id="pre-view" /><br/>
+        <input id="post-view" /><br/>
 
 
 <!--
