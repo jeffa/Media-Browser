@@ -387,17 +387,25 @@ function by_link( field, value ) {
 
 function edit_tag( title_id, tags ) {
     $( '#tag-' + title_id ).html(
-        '<input type="text" value="' + tags + '"'
+        '<input id="edit-tag-' + title_id + '" type="text" value="' + tags + '"'
         + ' onblur="javascript: show_tag(' + title_id + ', this )"'
         + '/>'
     );
+    $( '#edit-tag-' + title_id ).focus();
 }
 
 function show_tag( title_id, input ) {
-    $( '#tag-' + title_id ).html(
-        '<span class="badge alert-success" onclick="javascript: edit_tag( ' + title_id + ', \'foo\' )">foo</span>'
-    );
-    //alert( input.value.split(' ') );
+    var html = '';
+    var span = '<span class="badge alert-success" onclick="javascript: edit_tag( ';
+    var values = input.value.split(' ');
+    if (values[0]) {
+        for (var i in values) {
+            html += span + title_id + ', \'' + input.value + '\' )">' + values[i] + '</span> ';
+        }
+    } else {
+        html = span + title_id + ', \'\' )">add</span>';
+    }
+    $( '#tag-' + title_id ).html( html );
 }
 </script>
 
@@ -502,20 +510,21 @@ function show_tag( title_id, input ) {
                 <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
               </tr>
               <% } %>
-              <% if ($obj->{tags}) { %>
               <tr>
                 <td>&nbsp;</td>
                 <td colspan="2">
-                    <div id="tag-<%= $obj->{title_id} %>">
+                    <div id="tag-<%= $obj->{title_id} %>" width="100%">
                     <% for (@{$obj->{tags}}) { %>
                         <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
                             <%= $_->{tag} %>
                         </span>
                     <% } %>
+                    <% unless (@{ $obj->{tags} || {} }) { %>
+                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">add</span>
+                    <% } %>
                     </div>
                 </td>
               </tr>
-              <% } %>
 
             <% for (@{$obj->{files} || []}) { %>
               <% my $f = $_->{file_name}; %>
