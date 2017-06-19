@@ -403,7 +403,7 @@ function show_tag( title_id, input ) {
             html += span + title_id + ', \'' + input.value + '\' )">' + values[i] + '</span> ';
         }
     } else {
-        html = span + title_id + ', \'\' )">add</span>';
+        html = span + title_id + ', \'\' )">add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span></span>';
     }
     $( '#tag-' + title_id ).html( html );
 }
@@ -453,15 +453,15 @@ function show_tag( title_id, input ) {
         <table width="100%"><tr><td valign="top">
             <table class="table-striped details">
               <tr>
-                <th>IMDB ID</th>
+                <th><span class="glyphicon glyphicon-film" aria-hidden="true" data-toggle="tooltip" title="IMDB ID"></span></th>
                 <td><span class="badge alert-success"><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></span></td>
               </tr>
               <tr>
-                <th>Year</th>
+                <th><span class="glyphicon glyphicon-calendar" aria-hidden="true" data-toggle="tooltip" title="Year"></span></th>
                 <td><span class="badge alert-success"><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></span></td>
               </tr>
               <tr>
-                <th>Director</th>
+                <th><span class="glyphicon glyphicon-bullhorn" aria-hidden="true" data-toggle="tooltip" title="Director"></span></th>
                 <td>
                 <% for (@{$obj->{directors} || []}) { %>
                     <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'director', '$_->{person_id}' )" %></span>
@@ -469,7 +469,7 @@ function show_tag( title_id, input ) {
                 </td>
               </tr>
               <tr>
-                <th>Writer</th>
+                <th><span class="glyphicon glyphicon-pencil" aria-hidden="true" data-toggle="tooltip" title="Writer"></span></th>
                 <td>
                 <% for (@{$obj->{writers} || []}) { %>
                     <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'writer', '$_->{person_id}' )" %></span>
@@ -477,27 +477,15 @@ function show_tag( title_id, input ) {
                 </td>
               </tr>
               <tr>
-                <th>Genre</th>
+                <th><span class="glyphicon glyphicon-list-alt" aria-hidden="true" data-toggle="tooltip" title="Genres"></span></th>
                 <td>
                 <% for (sort { $a->{genre_name} cmp $b->{genre_name} } @{$obj->{genres} || []}) { %>
                     <span class="badge alert-success"><%= link_to ucfirst($_->{genre_name}) => "javascript: by_link( 'genre', '$_->{genre_id}' )" %></span>
                 <% } %>
                 </td>
               </tr>
-              <% if ($obj->{mpaa}) { %>
               <tr>
-                <th>MPAA</th>
-                <td><span class="badge alert-warning"><%= $obj->{mpaa} %></span></td>
-              </tr>
-              <% } %>
-              <% if ($obj->{kind}) { %>
-              <tr>
-                <th>Kind</th>
-                <td><span class="badge alert-warning"><%= $obj->{kind} %></span></td>
-              </tr>
-              <% } %>
-              <tr>
-                <th>Duration</th>
+                <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span></th>
                 <td>
                 <% for (@{$obj->{durations} || []}) { %>
                     <span class="badge alert-warning"><%= $_ %></span>
@@ -506,13 +494,13 @@ function show_tag( title_id, input ) {
               </tr>
               <% if ($obj->{ratio}) { %>
               <tr>
-                <th>Ratio</th>
+                <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span></th>
                 <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
               </tr>
               <% } %>
               <tr>
-                <td>&nbsp;</td>
-                <td colspan="2">
+                <th><span class="glyphicon glyphicon-tags" aria-hidden="true" data-toggle="tooltip" title="Tags"></span></th>
+                <td>
                     <div id="tag-<%= $obj->{title_id} %>" width="100%">
                     <% for (@{$obj->{tags}}) { %>
                         <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
@@ -520,7 +508,9 @@ function show_tag( title_id, input ) {
                         </span>
                     <% } %>
                     <% unless (@{ $obj->{tags} || {} }) { %>
-                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">add</span>
+                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">
+                            add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+                        </span>
                     <% } %>
                     </div>
                 </td>
@@ -530,7 +520,7 @@ function show_tag( title_id, input ) {
               <% my $f = $_->{file_name}; %>
               <% my $s = substr( $f, 0, 60 ); %>
               <tr>
-                <th>Filename</th>
+                <th><span class="glyphicon glyphicon-folder-open" aria-hidden="true" data-toggle="tooltip" title="File"></span></th>
                 <td><span class="badge alert-warning"><% if ($f eq $s) { %><%= $f %><% } else { %><abbr title="<%= $f %>"><%= $s %></abbr><% } %></span></td>
               </tr>
               <tr>
@@ -538,28 +528,28 @@ function show_tag( title_id, input ) {
                 <td>
                     <table class="table-striped details">
                       <tr>
-                        <th>Duration</th>
+                        <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Actual Duration"></span></th>
                         <td><span class="badge alert-warning"><%= $_->{actual_duration} %></span></td>
                       </tr>
                       <tr>
-                        <th>Ratio</th>
+                        <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Actual Ratio"></span></th>
                         <td><span class="badge alert-warning"><%= $_->{actual_ratio} %></span></td>
                       </tr>
                       <tr>
-                        <th>Dimension</th>
+                        <th><span class="glyphicon glyphicon-fullscreen" aria-hidden="true" data-toggle="tooltip" title="Dimension"></span></th>
                         <td><span class="badge alert-warning"><%= join 'x', $_->{width}, $_->{height} %></span></td>
                       </tr>
                       <tr>
-                        <th>Filesize</th>
+                        <th><span class="glyphicon glyphicon-file" aria-hidden="true" data-toggle="tooltip" title="Actual Size"></span></th>
                         <td><span class="badge alert-warning"><%= $_->{actual_size} %></span></td>
                       </tr>
                       <tr>
-                        <th>FrameRate</th>
+                        <th><span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span></th>
                         <td><span class="badge alert-warning"><%= $_->{frame_rate} %></span></td>
                       </tr>
                     <% if ($_->{source}) { %>
                       <tr>
-                        <th>Source</th>
+                        <th><span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span></th>
                         <td><span class="badge alert-warning"><%= (split( /\./, $_->{source}, 2 ))[0] %></span></td>
                       </tr>
                     <% } %>
@@ -570,6 +560,10 @@ function show_tag( title_id, input ) {
 
             </table>
         </td><td align="right" valign="top">
+            <div align="center">
+                <span float="right" class="glyphicon glyphicon-thumbs-up alert alert-danger" aria-hidden="true"></span> &nbsp;
+                <span float="right" class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+            </div>
             <img class="img-thumbnail" src="<%= $obj->{cover} %>" />
         </td></tr></table>
 
@@ -623,25 +617,25 @@ function show_tag( title_id, input ) {
           <ul class="pagination">
              <li class="disabled"><a>Title</a></li>
              <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'sort' );">&#x25B2;</a>
+                  <a href="javascript: sort_by( 'sort' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
              </li>
              <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'sortD' );">&#x25BC;</a>
+                  <a href="javascript: sort_by( 'sortD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
              </li>
           </ul>
           <ul class="pagination">
              <li class="disabled"><a>Year</a></li>
              <li class="<%= $sort eq 'year' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'year' );">&#x25B2;</a>
+                  <a href="javascript: sort_by( 'year' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
              </li>
              <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'yearD' );">&#x25BC;</a>
+                  <a href="javascript: sort_by( 'yearD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
              </li>
           </ul>
           <ul class="pagination">
              <li class="disabled"><a>Added</a></li>
              <li class="<%= $sort eq 'added' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'added' );">&#x25BC;</a>
+                  <a href="javascript: sort_by( 'added' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
              </li>
           </ul>
         </nav>
@@ -657,9 +651,8 @@ function show_tag( title_id, input ) {
           </ul>
         </nav>
 
-        <% if ($sql) { %>
-        <samp><%= ' ' || $sql %></samp>
-        <% } %>
+        <% if (0 && $sql) { %>
+        <samp><%= $sql %></samp>
 
         <pre>
         query  => <%= $query %> 
@@ -670,9 +663,8 @@ function show_tag( title_id, input ) {
         pre    => <%= $pre %>
         post   => <%= $post %>
         </pre>
-        <input id="pre-view" /><br/>
-        <input id="post-view" /><br/>
 
+        <% } %>
 
 <!--
 <form class="form-inline">
