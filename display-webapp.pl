@@ -337,8 +337,9 @@ function toggle( param ) {
     var value = $( '#' + param ).val();
     $( '#' + param ).val( value > 0 ? 0 : 1 );
     var value = $( '#' + param ).val();
-    $( '#' + param + '-text' ).html( value > 0 ? '%' : '&nbsp;' );
     $( '#' + param + '-view' ).val( value );
+    $( '#' + param + '-button' ).toggleClass( 'btn-info' );
+    $( '#' + param + '-button' ).toggleClass( 'btn-link' );
 }
 
 function step_left() {
@@ -587,16 +588,16 @@ function show_tag( title_id, input ) {
             </select>
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('pre')" class="btn btn-info <%= $pre ? 'active' : '' %>">
-                <input type="checkbox" /><div id="pre-text"><%== $pre ? '%' : '&nbsp;' %></div>
+              <label id="pre-button" onclick="javascript: toggle('pre')" class="btn <%= $pre ? 'btn-info active' : 'btn-link' %>">
+                <input type="checkbox" />%
               </label>
             </div>
 
             <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
 
             <div class="btn-group" data-toggle="buttons">
-              <label onclick="javascript: toggle('post')" class="btn btn-info <%= $post ? 'active' : '' %>">
-                <input type="checkbox" /><div id="post-text"><%== $post ? '%' : '&nbsp;' %></div>
+              <label id="post-button" onclick="javascript: toggle('post')" class="btn <%= $post ? 'btn-info active' : 'btn-link' %>">
+                <input type="checkbox" />%
               </label>
             </div>
 
