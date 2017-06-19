@@ -157,7 +157,8 @@ get '/fetch' => sub {
                     display_size as actual_size,
                     duration as actual_duration,
                     ratio as actual_ratio,
-                    height, width, frame_rate, source
+                    height, width, frame_rate, source,
+                    audio_channels, audio_format, audio_sample_rate
                 FROM files
                 WHERE title_id = ?
             ', {Slice=>{}}, $_->{title_id} )
@@ -251,8 +252,6 @@ __DATA__
     <title>Movie Collection Browser</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
     <style type="text/css">
-        table.details { padding: 10; }
-        table.details th { width: 15%; vertical-align: top; }
         a   { color: #333 }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
@@ -340,6 +339,10 @@ function toggle( param ) {
     $( '#' + param + '-view' ).val( value );
     $( '#' + param + '-button' ).toggleClass( 'btn-info' );
     $( '#' + param + '-button' ).toggleClass( 'btn-link' );
+}
+
+function thumbs( param, title_id ) {
+    $( '#thumbs-' + param + '-' + title_id ).toggleClass( 'btn-danger' );
 }
 
 function step_left() {
@@ -454,7 +457,7 @@ function show_tag( title_id, input ) {
         <table width="100%"><tr><td valign="top">
             <table class="table-striped details">
               <tr>
-                <th><span class="glyphicon glyphicon-film" aria-hidden="true" data-toggle="tooltip" title="IMDB ID"></span></th>
+                <th><span class="glyphicon glyphicon-film alert-success" aria-hidden="true" data-toggle="tooltip" title="IMDB ID"></span></th>
                 <td><span class="badge alert-success"><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></span></td>
               </tr>
               <tr>
@@ -486,20 +489,6 @@ function show_tag( title_id, input ) {
                 </td>
               </tr>
               <tr>
-                <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span></th>
-                <td>
-                <% for (@{$obj->{durations} || []}) { %>
-                    <span class="badge alert-warning"><%= $_ %></span>
-                <% } %>
-                </td>
-              </tr>
-              <% if ($obj->{ratio}) { %>
-              <tr>
-                <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span></th>
-                <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
-              </tr>
-              <% } %>
-              <tr>
                 <th><span class="glyphicon glyphicon-tags" aria-hidden="true" data-toggle="tooltip" title="Tags"></span></th>
                 <td>
                     <div id="tag-<%= $obj->{title_id} %>" width="100%">
@@ -516,12 +505,26 @@ function show_tag( title_id, input ) {
                     </div>
                 </td>
               </tr>
+              <tr>
+                <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span></th>
+                <td>
+                <% for (@{$obj->{durations} || []}) { %>
+                    <span class="badge alert-warning"><%= $_ %></span>
+                <% } %>
+                </td>
+              </tr>
+              <% if ($obj->{ratio}) { %>
+              <tr>
+                <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span></th>
+                <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
+              </tr>
+              <% } %>
 
             <% for (@{$obj->{files} || []}) { %>
               <% my $f = $_->{file_name}; %>
               <% my $s = substr( $f, 0, 60 ); %>
               <tr>
-                <th><span class="glyphicon glyphicon-folder-open" aria-hidden="true" data-toggle="tooltip" title="File"></span></th>
+                <th><span class="glyphicon glyphicon-folder-open alert-warning" aria-hidden="true" data-toggle="tooltip" title="File"></span></th>
                 <td><span class="badge alert-warning"><% if ($f eq $s) { %><%= $f %><% } else { %><abbr title="<%= $f %>"><%= $s %></abbr><% } %></span></td>
               </tr>
               <tr>
@@ -548,6 +551,18 @@ function show_tag( title_id, input ) {
                         <th><span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span></th>
                         <td><span class="badge alert-warning"><%= $_->{frame_rate} %></span></td>
                       </tr>
+                      <tr>
+                        <th><span class="glyphicon glyphicon-tasks" aria-hidden="true" data-toggle="tooltip" title="Audio Channels"></span></th>
+                        <td><span class="badge alert-warning"><%= $_->{audio_channels} %></span></td>
+                      </tr>
+                      <tr>
+                        <th><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true" data-toggle="tooltip" title="Audio Format"></span></th>
+                        <td><span class="badge alert-warning"><%= $_->{audio_format} %></span></td>
+                      </tr>
+                      <tr>
+                        <th><span class="glyphicon glyphicon-headphones" aria-hidden="true" data-toggle="tooltip" title="Audio Sample Rate"></span></th>
+                        <td><span class="badge alert-warning"><%= $_->{audio_sample_rate} %></span></td>
+                      </tr>
                     <% if ($_->{source}) { %>
                       <tr>
                         <th><span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span></th>
@@ -561,11 +576,25 @@ function show_tag( title_id, input ) {
 
             </table>
         </td><td align="right" valign="top">
-            <div align="center">
-                <span float="right" class="glyphicon glyphicon-thumbs-up alert alert-danger" aria-hidden="true"></span> &nbsp;
-                <span float="right" class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+
+            <div align="center" class="btn-group" data-toggle="buttons">
+              <label id="thumbs-up-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'up', <%= $obj->{title_id} %> )" class="btn btn-link'">
+                <input type="checkbox" />
+                <span float="right" class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> &nbsp;
+              </label>
             </div>
-            <img class="img-thumbnail" src="<%= $obj->{cover} %>" />
+
+            <div align="center" class="btn-group" data-toggle="buttons">
+              <label id="thumbs-down-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'down', <%= $obj->{title_id} %> )" class="btn btn-link'">
+                <input type="checkbox" />
+                <span float="right" class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+              </label>
+            </div>
+
+            <div>
+                <img class="img-thumbnail" src="<%= $obj->{cover} %>" />
+            </div>
+
         </td></tr></table>
 
       </div>
