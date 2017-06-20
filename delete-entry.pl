@@ -44,6 +44,27 @@ if ($title_id =~ /^tt\d{7}$/) {
     do_sql( $sql, $title_id );
 }
 
+{ # tags
+    my $sth = $dbh->selectall_arrayref( '
+        select x.tag_id, count(*) as count
+        from tag_xref x 
+        inner join tags t on x.tag_id=t.tag_id 
+        where x.tag_id in( select tag_id from tag_xref where title_id = ? ) 
+        group by x.tag_id
+        having count = 1
+    ', {Slice=>{}}, $title_id );
+    next unless scalar @$sth;
+    my $sql = 'delete from tags where tag_id in( ' . join(', ', map $_->{tag_id}, @$sth ) . ' ) limit ' . scalar @$sth;
+    do_sql( $sql, $title_id );
+}
+
+{ # tags_xref
+    my ($total) = $dbh->selectrow_array( 'select count(*) from tag_xref where title_id = ?', undef, $title_id );
+    next unless $total;
+    my $sql = "delete from tag_xref where title_id = ? limit $total";
+    do_sql( $sql, $title_id );
+}
+
 { # files
     my ($total) = $dbh->selectrow_array( 'select count(*) from files where title_id = ?', undef, $title_id );
     next unless $total;
