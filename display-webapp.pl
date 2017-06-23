@@ -15,7 +15,7 @@ my $MAX_PAGE = 10;
 
 my $dbh = get_dbh();
 
-my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer );
+my %valid_fields = map {( $_ => 1 )} qw( sort year genre director writer tag );
 
 get '/' => sub {
     my $self = shift;
@@ -72,6 +72,19 @@ get '/fetch' => sub {
             } else {
                 $predicate = ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id'
                             . sprintf ' WHERE g.genre_name %s "%s%s%s"', 
+                                ($pre || $post ? 'LIKE' : '='),
+                                ($pre  ? '%' : ''),
+                                $query,
+                                ($post ? '%' : ''),
+                ;
+            }
+        } elsif ($field eq 'tag') {
+            if ($query =~ /^\d+$/) {
+                $predicate = ' INNER JOIN tag_xref x ON titles.title_id=x.title_id INNER JOIN tags t ON x.tag_id=t.tag_id WHERE t.tag_id = ?';
+                push @vars, $query;
+            } else {
+                $predicate = ' INNER JOIN tag_xref x ON titles.title_id=x.title_id INNER JOIN tags t ON x.tag_id=t.tag_id'
+                            . sprintf ' WHERE t.tag %s "%s%s%s"', 
                                 ($pre || $post ? 'LIKE' : '='),
                                 ($pre  ? '%' : ''),
                                 $query,
@@ -506,19 +519,22 @@ function show_tag( title_id, input ) {
                 </td>
               </tr>
               <tr>
-                <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span></th>
-                <td>
-                <% for (@{$obj->{durations} || []}) { %>
-                    <span class="badge alert-warning"><%= $_ %></span>
-                <% } %>
+                <td>&nbsp;</td>
+                <td align="center">
+                  <% if ($obj->{ratio}) { %>
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span>
+                        <%= $obj->{ratio} %>
+                    </span>
+                  <% } %>
+                  <% for (@{$obj->{durations} || []}) { %>
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span>
+                        <%= $_ %>
+                    </span>
+                  <% } %>
                 </td>
               </tr>
-              <% if ($obj->{ratio}) { %>
-              <tr>
-                <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span></th>
-                <td><span class="badge alert-warning"><%= $obj->{ratio} %></span></td>
-              </tr>
-              <% } %>
 
             <% for (@{$obj->{files} || []}) { %>
               <% my $f = $_->{file_name}; %>
@@ -529,47 +545,58 @@ function show_tag( title_id, input ) {
               </tr>
               <tr>
                 <td>&nbsp;</td>
-                <td>
-                    <table class="table-striped details">
-                      <tr>
-                        <th><span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Actual Duration"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{actual_duration} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Actual Ratio"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{actual_ratio} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-fullscreen" aria-hidden="true" data-toggle="tooltip" title="Dimension"></span></th>
-                        <td><span class="badge alert-warning"><%= join 'x', $_->{width}, $_->{height} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-file" aria-hidden="true" data-toggle="tooltip" title="Actual Size"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{actual_size} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{frame_rate} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-tasks" aria-hidden="true" data-toggle="tooltip" title="Audio Channels"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{audio_channels} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-floppy-disk" aria-hidden="true" data-toggle="tooltip" title="Audio Format"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{audio_format} %></span></td>
-                      </tr>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-headphones" aria-hidden="true" data-toggle="tooltip" title="Audio Sample Rate"></span></th>
-                        <td><span class="badge alert-warning"><%= $_->{audio_sample_rate} %></span></td>
-                      </tr>
+                <td align="center">
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Actual Ratio"></span>
+                        <%= $_->{actual_ratio} %>
+                    </span>
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Actual Duration"></span>
+                        <%= $_->{actual_duration} %>
+                    </span>
+
+                    <br />
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-fullscreen" aria-hidden="true" data-toggle="tooltip" title="Dimension"></span>
+                        <%= join 'x', $_->{width}, $_->{height} %>
+                    </span>
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-file" aria-hidden="true" data-toggle="tooltip" title="Actual Size"></span>
+                        <%= $_->{actual_size} %>
+                    </span>
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span>
+                        <%= $_->{frame_rate} %>
+                    </span>
+
+                    <br />
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-tasks" aria-hidden="true" data-toggle="tooltip" title="Audio Channels"></span>
+                        <%= $_->{audio_channels} %>
+                    </span>
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true" data-toggle="tooltip" title="Audio Format"></span>
+                        <%= $_->{audio_format} %>
+                    </span>
+
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-headphones" aria-hidden="true" data-toggle="tooltip" title="Audio Sample Rate"></span>
+                        <%= $_->{audio_sample_rate} %>
+                    </span>
+
                     <% if ($_->{source}) { %>
-                      <tr>
-                        <th><span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span></th>
-                        <td><span class="badge alert-warning"><%= (split( /\./, $_->{source}, 2 ))[0] %></span></td>
-                      </tr>
+                    <br />
+                    <span class="badge alert-warning">
+                        <span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span>
+                        <%= (split( /\./, $_->{source}, 2 ))[0] %>
+                    </span>
                     <% } %>
-                    </table>
                 </td>
               </tr>
             <% } %>
@@ -611,7 +638,7 @@ function show_tag( title_id, input ) {
         <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
             <select name="field" class="form-control">
-            <% for my $f (qw( sort year genre director writer )) { %>
+            <% for my $f (qw( sort year genre director writer tag )) { %>
               <option value="<%= $f %>" <%= $field eq $f ? 'selected="1"' : '' %>><%= $f eq 'sort' ? 'Title' : ucfirst $f %></option>
             <% } %>
             </select>
@@ -681,7 +708,7 @@ function show_tag( title_id, input ) {
           </ul>
         </nav>
 
-        <% if (0 && $sql) { %>
+        <% if (1 && $sql) { %>
         <samp><%= $sql %></samp>
 
         <pre>
