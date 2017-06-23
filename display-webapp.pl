@@ -10,6 +10,8 @@ use Data::SpreadPagination;
 use lib 'lib';
 use MovieUtil qw( get_dbh );
 
+my $DEBUG = shift;
+
 my $PER_PAGE = 25;
 my $MAX_PAGE = 10;
 
@@ -143,6 +145,7 @@ get '/fetch' => sub {
             query  => $query,
             sql    => $sql,
             field  => $field,
+            DEBUG  => $DEBUG,
         );
         $self->render( template => 'results' );
         return;
@@ -248,6 +251,7 @@ get '/fetch' => sub {
         query  => $query,
         sql    => $sql,
         field  => $field,
+        DEBUG  => $DEBUG,
     );
 
     $self->render( template => 'results' );
@@ -708,7 +712,7 @@ function show_tag( title_id, input ) {
           </ul>
         </nav>
 
-        <% if (1 && $sql) { %>
+        <% if ($DEBUG) { %>
         <samp><%= $sql %></samp>
 
         <pre>
