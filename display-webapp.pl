@@ -28,23 +28,21 @@ get '/' => sub {
 get '/tags' => sub {
     my $self = shift;
     my $title_id = int( $self->param( 'title_id' ) || 0 );
+    my $edit     = int( $self->param( 'edit' ) || 0 );
     my $tags     = lc( $self->param( 'tags' ) || '' );
 
-    my @tags = @{ $dbh->selectcol_arrayref(
+    my $tags = $dbh->selectcol_arrayref(
         'SELECT tag FROM tags INNER JOIN tag_xref x ON tags.tag_id=x.tag_id WHERE x.title_id = ?',
         undef, $title_id
-    ) || {} };
-    my $tags = join ' ', @tags;
+    );
 
-    my $html = '';
-    my $tmpl = q{<span class="badge alert-success" onclick="javascript: edit_tag( '%d', '%s' )">%s<span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span></span> };
-    if (@tags) {
-        $html .= sprintf( $tmpl, $title_id, $tags, $_ ) for @tags;
-    } else {
-        $html = sprintf( $tmpl, $title_id, $tags, 'add tags' );
-    }
+    $self->stash(
+        title_id    => $title_id,
+        tags        => @$tags ? $tags : [ 'add tags' ],
+        joined_tags => join( ' ', @$tags ),
+    );
 
-    $self->render( text => $html );
+    $self->render( template => $edit ? 'edit-tags' : 'show-tags' );
 };
 
 get '/fetch' => sub {
@@ -271,6 +269,17 @@ app->start( daemon => '-l', 'http://*:3000' );
 
 
 __DATA__
+@@ edit-tags.html.ep
+<input id="edit-tag-<%= $title_id %>" type="text" value="<%= $joined_tags %>" onblur="javascript: show_tag( '<%= $title_id %>', this )" />
+
+@@ show-tags.html.ep
+<% for my $tag (@$tags) { %>
+    <span class="badge alert-success" onclick="javascript: edit_tag( '<%= $title_id %>', '<%= $joined_tags %>' )">
+        <%= $tag %>
+        <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+    </span>
+<% } %>
+
 @@ index.html.ep
 <!DOCTYPE html>
 <html>
@@ -416,11 +425,14 @@ function by_link( field, value ) {
 }
 
 function edit_tag( title_id, tags ) {
-    $( '#tag-' + title_id ).html(
-        '<input id="edit-tag-' + title_id + '" type="text" value="' + tags + '"'
-        + ' onblur="javascript: show_tag(' + title_id + ', this )"'
-        + '/>'
-    );
+    var params = $.param([
+        {name: "title_id",  value: title_id},
+        {name: "tags",      value: tags},
+        {name: "edit",      value: 1}
+    ]);
+
+    var url  = '/tags?' + params;
+    _ajaxGET( url, '#tag-' + title_id );
     $( '#edit-tag-' + title_id ).focus();
 }
 
