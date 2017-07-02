@@ -104,6 +104,7 @@ CREATE TABLE tags(
     tag             VARCHAR(64) NOT NULL,
     UNIQUE KEY tag (tag)
 );
+CREATE INDEX tags_tag   ON tags( tag );
 
 CREATE TABLE tag_xref(
     tag_xref_id     SERIAL PRIMARY KEY,
@@ -113,3 +114,4 @@ CREATE TABLE tag_xref(
 );
 CREATE INDEX tag_tag_id     ON tag_xref( tag_id );
 CREATE INDEX tag_title_id   ON tag_xref( title_id );
+CREATE INDEX tag_title_id_tag_id ON tag_xref( title_id, tag_id );
