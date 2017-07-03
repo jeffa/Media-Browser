@@ -37,15 +37,38 @@ for my $tag_id (@tag_ids) {
     $dbh->do( 'insert into tag_xref(tag_id,title_id) values(?,?)', undef, $tag_id, $title_id );
 }
 
+my @to_unlink = map { $new{$_} ? () : $all{$_} } keys %old;
 
+my @to_delete;
+@to_delete = @{ $dbh->selectcol_arrayref( '
+    select x.tag_id, count(*) as count
+    from tag_xref x 
+    inner join tags t on x.tag_id=t.tag_id 
+    where x.tag_id in( ' . join(', ', @to_unlink ) . ')
+    group by x.tag_id
+    having count = 1
+') } if @to_unlink;
 
-my @to_del = map { $new{$_} ? () : $all{$_} } keys %old;
+if (@to_delete) {
+    warn "gonna delete '@to_delete'\n";
+    $dbh->do(
+        'delete from tags where tag_id in( ' 
+        . join(', ', @to_delete ) . ')'
+    );
+}
 
-
-
-
+if (@to_unlink) {
+    warn "gonna unlink '@to_unlink'\n";
+    $dbh->do( 
+        'delete from tag_xref where title_id = ? and tag_id in( '
+        . join(', ', @to_unlink ) . ')',
+        undef, $title_id
+    );
+}
 
 print join( ' ', tags( $dbh, $title_id ) ), $/;
+
+
 
 sub tags {
     my ($dbh, $title_id) = @_;
@@ -58,4 +81,3 @@ sub tags {
         order by t.tag
     ', undef, $title_id ) }
 }
-    
