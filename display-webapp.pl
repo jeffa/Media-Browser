@@ -30,26 +30,18 @@ get '/tags' => sub {
     my $title_id = int( $self->param( 'title_id' ) || 0 );
     my $edit     = int( $self->param( 'edit' ) || 0 );
     my $new_tags = lc( $self->param( 'tags' ) || '' );
+    my @new_tags = split( ' ', $new_tags );
+    warn "tags = $new_tags\n";
 
     my @tags = tags( $dbh, $title_id );
-
-    unless ($edit) {
-        $self->stash(
-            title_id    => $title_id,
-            tags        => @tags ? \@tags : [ 'add tags' ],
-            joined_tags => join( ' ', @tags ),
-        );
-        $self->render( template => 'show-tags' );
-        return;
-    }
-
     my %old = map { $_ => 1 } @tags;
-    my %new = map { $_ => 1 } split( ' ', $new_tags );;
+    my %new = map { $_ => 1 } @new_tags;
 
     my $sth = $dbh->selectall_arrayref('select tag, tag_id from tags');
     my %all = map { @$_ } @$sth;
 
     my @to_add = map { $old{$_} ? () : $all{$_} || $_ } keys %new;
+    warn "add = @to_add\n";
     my @tag_ids;
     for my $tag (@to_add) {
         if ($tag =~ /\D/) {
@@ -91,12 +83,22 @@ get '/tags' => sub {
         );
     }
 
-    my @tags = tags( $dbh, $title_id );
+    #my @tags = tags( $dbh, $title_id );
+
+    unless ($edit) {
+        $self->stash(
+            title_id    => $title_id,
+            tags        => @tags ? \@tags : [ 'add tags' ],
+            joined_tags => join( ' ', @tags ),
+        );
+        $self->render( template => 'show-tags' );
+        return;
+    }
 
     $self->stash(
         title_id    => $title_id,
-        tags        => \@tags,
-        joined_tags => join( ' ', @tags ),
+        tags        => \@new_tags,
+        joined_tags => join( ' ', @new_tags ),
     );
     $self->render( template => 'edit-tags' );
 };
@@ -500,21 +502,17 @@ function edit_tag( title_id, tags ) {
 
     var url  = '/tags?' + params;
     _ajaxGET( url, '#tag-' + title_id );
-    $( '#edit-tag-' + title_id ).focus();
+    //$( '#edit-tag-' + title_id ).focus();
 }
 
 function show_tag( title_id, input ) {
-    var html = '';
-    var span = '<span class="badge alert-success" onclick="javascript: edit_tag( ';
-    var values = input.value.split(' ');
-    if (values[0]) {
-        for (var i in values) {
-            html += span + title_id + ', \'' + input.value + '\' )">' + values[i] + '</span> ';
-        }
-    } else {
-        html = span + title_id + ', \'\' )">add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span></span>';
-    }
-    $( '#tag-' + title_id ).html( html );
+    var params = $.param([
+        {name: "title_id",  value: title_id},
+        {name: "tags",      value: input.value},
+    ]);
+
+    var url  = '/tags?' + params;
+    _ajaxGET( url, '#tag-' + title_id );
 }
 </script>
 
