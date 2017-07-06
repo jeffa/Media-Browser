@@ -83,24 +83,13 @@ get '/tags' => sub {
         );
     }
 
-    #my @tags = tags( $dbh, $title_id );
-
-    unless ($edit) {
-        $self->stash(
-            title_id    => $title_id,
-            tags        => @tags ? \@tags : [ 'add tags' ],
-            joined_tags => join( ' ', @tags ),
-        );
-        $self->render( template => 'show-tags' );
-        return;
-    }
-
+    my @tags = tags( $dbh, $title_id );
     $self->stash(
         title_id    => $title_id,
-        tags        => \@new_tags,
-        joined_tags => join( ' ', @new_tags ),
+        tags        => @tags ? \@tags : [ 'add tags' ],
+        joined_tags => join( ' ', @tags ),
     );
-    $self->render( template => 'edit-tags' );
+    $self->render( template => $edit ? 'edit-tags' : 'show-tags' );
 };
 
 get '/fetch' => sub {
