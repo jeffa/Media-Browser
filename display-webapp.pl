@@ -605,6 +605,12 @@ function show_tag( title_id, input ) {
                     </div>
                 </td>
               </tr>
+              <% if ($DEBUG) { %>
+              <tr>
+                <th><span class="glyphicon glyphicon-pencil" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
+                <td><span style="font-size: xx-small"><%== $obj->{story} %></span></td>
+              </tr>
+              <% } %>
               <tr>
                 <td>&nbsp;</td>
                 <td align="center">
@@ -689,7 +695,7 @@ function show_tag( title_id, input ) {
             <% } %>
 
             </table>
-        </td><td align="right" valign="top">
+        </td><td width="30%" align="right" valign="top">
 
             <div align="center" class="btn-group" data-toggle="buttons">
               <label id="thumbs-up-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'up', <%= $obj->{title_id} %> )" class="btn btn-link'">
