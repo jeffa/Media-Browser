@@ -83,7 +83,7 @@ get '/tags' => sub {
         );
     }
 
-    my @tags = tags( $dbh, $title_id );
+    @tags = tags( $dbh, $title_id );
     $self->stash(
         title_id    => $title_id,
         tags        => @tags ? \@tags : [ 'add tags' ],
@@ -186,6 +186,31 @@ get '/fetch' => sub {
         maxPages          => $MAX_PAGE,
     });
 
+    my $cloud = $dbh->selectall_arrayref('
+        select count(*) as total, t.tag, t.tag_id
+        from tags t inner join tag_xref x on t.tag_id=x.tag_id
+        group by tag
+        having total > 2
+        order by total desc
+    ');
+    my %cloud;
+    push @{ $cloud{$_->[0]} }, { tag => $_->[1], tag_id => $_->[2] } for @$cloud;
+
+    my @cloud;
+    my $last = 999_999_999;
+    my $size = 23;
+    for my $count (sort { $b <=> $a } keys %cloud) {
+        if ($last != $count) {
+            $size--;
+        }
+
+        $_->{size} = $size for @{ $cloud{$count} };
+        push @cloud, @{ $cloud{$count} };
+        $last = $count;
+    }
+
+    @cloud = sort { $a->{tag} cmp $b->{tag} } @cloud;
+
     unless ($total->[0]) {
         $self->stash(
             titles => [],
@@ -199,6 +224,7 @@ get '/fetch' => sub {
             query  => $query,
             sql    => $sql,
             field  => $field,
+            cloud  => \@cloud,
             DEBUG  => $DEBUG,
         );
         $self->render( template => 'results' );
@@ -305,6 +331,7 @@ get '/fetch' => sub {
         query  => $query,
         sql    => $sql,
         field  => $field,
+        cloud  => \@cloud,
         DEBUG  => $DEBUG,
     );
 
@@ -587,7 +614,7 @@ function show_tag( title_id, input ) {
                     <% for (@{$obj->{tags}}) { %>
                       <% if ($DEBUG) { %>
                         <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
-                            <%= $_->{tag} %>
+                            <%= $_->{tag} %> <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
                         </span>
                       <% } else { %>
                         <span class="badge alert-success"><%= link_to $_->{tag} => "javascript: by_link( 'tag', '$_->{tag_id}' )" %></span>
@@ -598,8 +625,6 @@ function show_tag( title_id, input ) {
                         <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">
                             add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
                         </span>
-                      <% } else { %>
-                        <span class="badge alert-success"><%= link_to $_->{tag} => "javascript: by_link( 'tag', '$_->{tag_id}' )" %></span>
                       <% } %>
                     <% } %>
                     </div>
@@ -800,6 +825,12 @@ function show_tag( title_id, input ) {
             <% } %>
           </ul>
         </nav>
+
+        <div>
+        <% for my $tag (@$cloud) { %>
+            <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
+        <% } %>
+        </div>
 
         <% if ($DEBUG) { %>
         <samp><%= $sql %></samp>
