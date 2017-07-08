@@ -190,7 +190,7 @@ get '/fetch' => sub {
         select count(*) as total, t.tag, t.tag_id
         from tags t inner join tag_xref x on t.tag_id=x.tag_id
         group by tag
-        having total > 2
+        having total > 6
         order by total desc
     ');
     my %cloud;
@@ -201,7 +201,7 @@ get '/fetch' => sub {
     my $size = 23;
     for my $count (sort { $b <=> $a } keys %cloud) {
         if ($last != $count) {
-            $size--;
+            $size = $size - .5;
         }
 
         $_->{size} = $size for @{ $cloud{$count} };
@@ -509,6 +509,14 @@ function by_link( field, value ) {
     fetch_results();
 }
 
+function by_letter( value ) {
+    document.search.pre.value = 0;
+    document.search.post.value = 1;
+    document.search.field.value = 'sort';
+    document.search.query.value = value;
+    fetch_results();
+}
+
 function edit_tag( title_id, tags ) {
     var params = $.param([
         {name: "title_id",  value: title_id},
@@ -632,7 +640,7 @@ function show_tag( title_id, input ) {
               </tr>
               <% if ($DEBUG) { %>
               <tr>
-                <th><span class="glyphicon glyphicon-pencil" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
+                <th><span class="glyphicon glyphicon-briefcase" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
                 <td><span style="font-size: xx-small"><%== $obj->{story} %></span></td>
               </tr>
               <% } %>
@@ -785,9 +793,6 @@ function show_tag( title_id, input ) {
 
         </form>
 
-        <p>&nbsp</p>
-        <p>&nbsp</p>
-
         <nav aria-label="Sort navigation">
           <ul class="pagination">
              <li class="disabled"><a>Title</a></li>
@@ -815,6 +820,12 @@ function show_tag( title_id, input ) {
           </ul>
         </nav>
 
+        <div>
+        <% for ('a' .. 'z') { %>
+            <%= link_to $_ => "javascript: by_letter( '$_' )", style => 'font-size: 14pt' %>&nbsp;
+        <% } %>
+        </div>
+
         <nav aria-label="Sort navigation">
           <ul class="pagination">
               <li class="disabled"><a>Per Page:</a></li>
@@ -832,7 +843,7 @@ function show_tag( title_id, input ) {
         <% } %>
         </div>
 
-        <% if ($DEBUG) { %>
+        <% if (0 && $DEBUG) { %>
         <samp><%= $sql %></samp>
 
         <pre>
