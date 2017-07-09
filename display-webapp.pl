@@ -12,8 +12,8 @@ use MovieUtil qw( get_dbh );
 
 my $DEBUG = shift;
 
-my $PER_PAGE = 25;
-my $MAX_PAGE = 10;
+my $PER_PAGE = 10;
+my $MAX_PAGE = 6;
 
 my $dbh = get_dbh();
 
@@ -190,7 +190,7 @@ get '/fetch' => sub {
         select count(*) as total, t.tag, t.tag_id
         from tags t inner join tag_xref x on t.tag_id=x.tag_id
         group by tag
-        having total > 6
+        having total > 2
         order by total desc
     ');
     my %cloud;
@@ -447,6 +447,16 @@ function fetch_results( curr = 1 ) {
     _ajaxGET( url, '#results' );
 }
 
+function reset_form() {
+    document.search.per.value   = 10;
+    document.search.pre.value   = 1;
+    document.search.post.value  = 1;
+    document.search.field.value = 'sort';
+    document.search.sort.value  = 'sort';
+    document.search.query.value = '';
+    fetch_results();
+}
+
 function set_results_per( per ) {
     document.search.per.value = per;
     fetch_results();
@@ -544,28 +554,36 @@ function show_tag( title_id, input ) {
   <div class="row">
     <div id="content" class="col-md-7">
 
-    <h2><%= $total %> titles found <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small></h2>
+    <table width="100%"><tr><td valign="top">
 
-    <nav aria-label="Page navigation">
-        <ul class="pagination">
-            <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
-                <a href="javascript: step_left();">&laquo;</a>
-            </li>
-        <% for my $number ($pager->pages_in_spread) { %>
-            <% if ($number) { %>
-            <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
-                <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
-            </li>
-            <% } else { %>
-            <li class="disabled"><a href="javascript:void">...</a></li>
+        <h2>
+            <span class="glyphicon glyphicon-eye-open" aria-hidden="true" data-toggle="tooltip" title="<%= $total %> titles found"></span>
+            <%= $total %> <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small>
+        </h2>
+
+    </td><td valign="top" align="right">
+
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
+                    <a href="javascript: step_left();">&laquo;</a>
+                </li>
+            <% for my $number ($pager->pages_in_spread) { %>
+                <% if ($number) { %>
+                <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
+                    <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
+                </li>
+                <% } else { %>
+                <li class="disabled"><a href="javascript:void">...</a></li>
+                <% } %>
             <% } %>
-        <% } %>
-            <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
-                <a href="javascript: step_right();">&raquo;</a>
-            </li>
-        </ul>
-    </nav>
+                <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
+                    <a href="javascript: step_right();">&raquo;</a>
+                </li>
+            </ul>
+        </nav>
 
+    </td></tr></table>
 
 <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
 <% for my $i (0 .. $#$titles) { %>
@@ -783,7 +801,9 @@ function show_tag( title_id, input ) {
               </label>
             </div>
 
-            <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading..."> Search! </button>
+            <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading...">
+                <span float="right" class="glyphicon glyphicon-search" aria-hidden="true"></span>
+            </button>
 
             <input id="curr" name="curr" type="hidden" />
             <input id="pre"  name="pre"  type="hidden" value="<%= $pre %>" />
@@ -822,11 +842,17 @@ function show_tag( title_id, input ) {
 
         <div>
         <% for ('a' .. 'z') { %>
-            <%= link_to $_ => "javascript: by_letter( '$_' )", style => 'font-size: 14pt' %>&nbsp;
+            <div class="btn-group" data-toggle="buttons">
+              <label id="pre-button" style="font-size: 9pt" onclick="javascript: by_letter( '<%= $_ %>' )" class="btn <%= $query eq $_ ? 'btn-info active' : 'btn-link' %>">
+                <%= $_ %>
+              </label>
+            </div>
         <% } %>
         </div>
 
         <nav aria-label="Sort navigation">
+
+          <table width="90%"><tr><td>
           <ul class="pagination">
               <li class="disabled"><a>Per Page:</a></li>
             <% for my $number (10,25,50,100,200) { %>
@@ -835,11 +861,25 @@ function show_tag( title_id, input ) {
               </li>
             <% } %>
           </ul>
+
+          </td><td align="right">
+
+            <button id="go" class="btn btn-primary" type="button" onclick="javascript: reset_form()">
+                <span float="right" class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+            </button>
+
+          </td></tr></table>
+
         </nav>
 
         <div>
         <% for my $tag (@$cloud) { %>
-            <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
+            <% next if $tag->{size} < 7; %>
+            <% if ($query eq $tag->{tag_id}) { %>
+                <u style="<%= sprintf('font-size: %dpt', $tag->{size}) %>"><%= $tag->{tag} %></u>
+            <% } else { %>
+                <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
+            <% } %>
         <% } %>
         </div>
 
