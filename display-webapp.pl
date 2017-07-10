@@ -31,7 +31,6 @@ get '/tags' => sub {
     my $edit     = int( $self->param( 'edit' ) || 0 );
     my $new_tags = lc( $self->param( 'tags' ) || '' );
     my @new_tags = split( ' ', $new_tags );
-    warn "tags = $new_tags\n";
 
     my @tags = tags( $dbh, $title_id );
     my %old = map { $_ => 1 } @tags;
@@ -215,7 +214,7 @@ get '/fetch' => sub {
         $self->stash(
             titles => [],
             pager  => $pager,
-            total  => 'No',
+            total  => 0,
             per    => $per,
             pre    => defined($pre)  ? $pre  : 1,
             post   => defined($post) ? $post : 1,
@@ -511,19 +510,12 @@ function sort_by( field ) {
     fetch_results();
 }
 
-function by_link( field, value ) {
-    document.search.pre.value = 0;
-    document.search.post.value = 0;
+function by_link( field, value, pre = 0, post = 0, sort = 'sort' ) {
     document.search.field.value = field;
     document.search.query.value = value;
-    fetch_results();
-}
-
-function by_letter( value ) {
-    document.search.pre.value = 0;
-    document.search.post.value = 1;
-    document.search.field.value = 'sort';
-    document.search.query.value = value;
+    document.search.pre.value   = pre;
+    document.search.post.value  = post;
+    document.search.sort.value  = sort;
     fetch_results();
 }
 
@@ -557,8 +549,12 @@ function show_tag( title_id, input ) {
     <table width="100%"><tr><td valign="top">
 
         <h2>
+          <% if ($total) { %>
             <span class="glyphicon glyphicon-eye-open" aria-hidden="true" data-toggle="tooltip" title="<%= $total %> titles found"></span>
             <%= $total %> <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small>
+          <% } else { %>
+            <span class="glyphicon glyphicon-eye-close" aria-hidden="true" data-toggle="tooltip" title="No titles found :("></span>
+          <% } %>
         </h2>
 
     </td><td valign="top" align="right">
@@ -841,9 +837,20 @@ function show_tag( title_id, input ) {
         </nav>
 
         <div>
+        <% for ( [19,20], [19,30], [19,40], [19,50], [19,60], [19,70], [19,80], [19,90], [20,'00'], [20,10] ) { %>
+            <% my $year = join '', @$_; chop $year; %>
+            <div class="btn-group" data-toggle="buttons">
+              <label id="pre-button" style="font-size: 8pt" onclick="javascript: by_link( 'year', '<%= $year %>', 0, 1, 'year' )" class="btn <%= $query eq $year ? 'btn-info active' : 'btn-link' %>">
+                <%= $_->[1] . "s" %>
+              </label>
+            </div>
+        <% } %>
+        </div>
+
+        <div>
         <% for ('a' .. 'z') { %>
             <div class="btn-group" data-toggle="buttons">
-              <label id="pre-button" style="font-size: 9pt" onclick="javascript: by_letter( '<%= $_ %>' )" class="btn <%= $query eq $_ ? 'btn-info active' : 'btn-link' %>">
+              <label id="pre-button" style="font-size: 9pt" onclick="javascript: by_link( 'sort', '<%= $_ %>', 0, 1 )" class="btn <%= $query eq $_ ? 'btn-info active' : 'btn-link' %>">
                 <%= $_ %>
               </label>
             </div>
@@ -873,44 +880,15 @@ function show_tag( title_id, input ) {
         </nav>
 
         <div>
-        <% for my $tag (@$cloud) { %>
-            <% next if $tag->{size} < 7; %>
+          <% for my $tag (@$cloud) { %>
+            <% next if $tag->{size} < 6; %>
             <% if ($query eq $tag->{tag_id}) { %>
                 <u style="<%= sprintf('font-size: %dpt', $tag->{size}) %>"><%= $tag->{tag} %></u>
             <% } else { %>
                 <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
             <% } %>
-        <% } %>
+          <% } %>
         </div>
-
-        <% if (0 && $DEBUG) { %>
-        <samp><%= $sql %></samp>
-
-        <pre>
-        query  => <%= $query %> 
-        field  => <%= $field %>
-        per    => <%= $per %>
-        curr   => <%= $curr %>
-        sort   => <%= $sort %>
-        pre    => <%= $pre %>
-        post   => <%= $post %>
-        </pre>
-
-        <% } %>
-
-<!--
-<form class="form-inline">
-  <div class="form-group">
-    <label class="sr-only" for="exampleInputAmount">Amount (in dollars)</label>
-    <div class="input-group">
-      <div class="input-group-addon">$</div>
-      <input type="text" class="form-control" id="exampleInputAmount" placeholder="Amount">
-      <div class="input-group-addon">.00</div>
-    </div>
-  </div>
-  <button type="submit" class="btn btn-primary">Transfer cash</button>
-</form>
--->
 
     </div>
   </div>
