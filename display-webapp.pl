@@ -256,6 +256,7 @@ get '/fetch' => sub {
                     audio_channels, audio_format, audio_sample_rate
                 FROM files
                 WHERE title_id = ?
+                ORDER BY file_name
             ', {Slice=>{}}, $_->{title_id} )
         ;
 
@@ -372,6 +373,10 @@ __DATA__
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" />
     <style type="text/css">
         a   { color: #333 }
+        body {
+           transform: scale(0.9);
+           transform-origin: 0 0;
+        }
     </style>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
@@ -488,13 +493,13 @@ function step_right() {
 
 function step_up() {
     $( '.panel-collapse' ).collapse( 'hide' );
-    if (curr < 1) return;
+    if (curr < 0) return;
     $( '#collapse-' + panes[--curr] ).collapse( 'show' );
 }
 
 function step_down() {
     $( '.panel-collapse' ).collapse( 'hide' );
-    if (curr >= <%= $#$titles %>) return;
+    if (curr > <%= $#$titles %>) return;
     $( '#collapse-' + panes[++curr] ).collapse( 'show' );
 }
 
@@ -655,7 +660,7 @@ function show_tag( title_id, input ) {
               <% if ($DEBUG) { %>
               <tr>
                 <th><span class="glyphicon glyphicon-briefcase" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
-                <td><span style="font-size: xx-small"><%== $obj->{story} %></span></td>
+                <td><span style="font-size: x-small"><%== $obj->{story} %></span></td>
               </tr>
               <% } %>
               <tr>
@@ -809,6 +814,7 @@ function show_tag( title_id, input ) {
 
         </form>
 
+      <table width="90%"><tr><td>
         <nav aria-label="Sort navigation">
           <ul class="pagination">
              <li class="disabled"><a>Title</a></li>
@@ -835,6 +841,14 @@ function show_tag( title_id, input ) {
              </li>
           </ul>
         </nav>
+      </td><td align="right">
+
+        <button id="go" class="btn btn-primary" type="button" onclick="javascript: reset_form()">
+            <span float="right" class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
+        </button>
+
+      </td></tr></table>
+
 
         <div>
         <% for ( [19,20], [19,30], [19,40], [19,50], [19,60], [19,70], [19,80], [19,90], [20,'00'], [20,10] ) { %>
@@ -859,7 +873,6 @@ function show_tag( title_id, input ) {
 
         <nav aria-label="Sort navigation">
 
-          <table width="90%"><tr><td>
           <ul class="pagination">
               <li class="disabled"><a>Per Page:</a></li>
             <% for my $number (10,25,50,100,200) { %>
@@ -868,14 +881,6 @@ function show_tag( title_id, input ) {
               </li>
             <% } %>
           </ul>
-
-          </td><td align="right">
-
-            <button id="go" class="btn btn-primary" type="button" onclick="javascript: reset_form()">
-                <span float="right" class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
-            </button>
-
-          </td></tr></table>
 
         </nav>
 
