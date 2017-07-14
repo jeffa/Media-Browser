@@ -25,6 +25,23 @@ get '/' => sub {
     $self->render( template => 'index' );
 };
 
+get '/input' => sub {
+    my $self = shift;
+    $self->stash( query => '' );
+    $self->render( template => 'input' );
+};
+
+get '/select' => sub {
+    my $self = shift;
+    $self->stash(
+        name        => $self->param( 'name' ),
+        id          => $self->param( 'id' ),
+        class       => $self->param( 'class' ),
+        javascript  => $self->param( 'javascript' ),
+    );
+    $self->render( template => 'select' );
+};
+
 get '/tags' => sub {
     my $self = shift;
     my $title_id = int( $self->param( 'title_id' ) || 0 );
@@ -365,6 +382,23 @@ __DATA__
     </span>
 <% } %>
 
+@@ input.html.ep
+<input name="query" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
+
+@@ select.html.ep
+<select
+    <% if ($name) { %>name="<%= $name %>"<% } %>
+    <% if ($id) { %>id="<%= $id %>"<% } %>
+    <% if ($class) { %>class="<%= $class %>"<% } %>
+    <% if ($javascript) { %><%== $javascript %><% } %>
+>
+<% for my $item (@$list) { %>
+    <option value="<%= $item->{value} %>" <%= $item->{value} eq $selected ? 'selected="1"' : '' %>>
+        <%= $item->{label} %>
+    </option>
+<% } %>
+</select>
+
 @@ index.html.ep
 <!DOCTYPE html>
 <html>
@@ -544,6 +578,15 @@ function show_tag( title_id, input ) {
 
     var url  = '/tags?' + params;
     _ajaxGET( url, '#tag-' + title_id );
+}
+
+function change_query( select ) {
+
+    if (select.value == 'sort') {
+        //_ajaxGET( '/input', '#querybox' );
+    } else {
+        //_ajaxGET( '/select', '#querybox' );
+    }
 }
 </script>
 
@@ -782,11 +825,21 @@ function show_tag( title_id, input ) {
         <br />
         <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
-            <select name="field" class="form-control">
-            <% for my $f (qw( sort year genre director writer tag )) { %>
-              <option value="<%= $f %>" <%= $field eq $f ? 'selected="1"' : '' %>><%= $f eq 'sort' ? 'Title' : ucfirst $f %></option>
-            <% } %>
-            </select>
+            <%= include select =>
+                name        => 'field',
+                id          => 'field',
+                class       => 'form-control',
+                selected    => $field,
+                javascript  => q|onchange="javascript: change_query(this)"|,
+                list        => [
+                    { value => 'sort',      label => 'Title' },
+                    { value => 'year',      label => 'Year' },
+                    { value => 'genre',     label => 'Genre' },
+                    { value => 'director',  label => 'Director' },
+                    { value => 'writer',    label => 'Writer' },
+                    { value => 'tag',       label => 'Tag' },
+                ],
+            %>
 
             <div class="btn-group" data-toggle="buttons">
               <label id="pre-button" onclick="javascript: toggle('pre')" class="btn <%= $pre ? 'btn-info active' : 'btn-link' %>">
@@ -794,7 +847,7 @@ function show_tag( title_id, input ) {
               </label>
             </div>
 
-            <input name="query" id="appendedInputButton" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
+            <span id="querybox"><%= include input => query => $query %></span>
 
             <div class="btn-group" data-toggle="buttons">
               <label id="post-button" onclick="javascript: toggle('post')" class="btn <%= $post ? 'btn-info active' : 'btn-link' %>">
