@@ -467,235 +467,22 @@ __DATA__
 %= include 'javascript', titles => $titles, pager => $pager
 
 <div class="container-fluid">
-  <div class="row">
-    <div id="content" class="col-md-7">
+    <div class="row">
+        <div id="content" class="col-md-7">
+            <table width="100%"><tr><td valign="top">
+                %= include 'search-stats', total => $total, curr => $curr, per => $per
+            </td><td valign="top" align="right">
+                %= include 'pagination', pager => $pager
+            </td></tr></table>
 
-    <table width="100%"><tr><td valign="top">
-
-        <h2>
-          <% if ($total) { %>
-            <span class="glyphicon glyphicon-eye-open" aria-hidden="true" data-toggle="tooltip" title="<%= $total %> titles found"></span>
-            <%= $total %> <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small>
-          <% } else { %>
-            <span class="glyphicon glyphicon-eye-close" aria-hidden="true" data-toggle="tooltip" title="No titles found :("></span>
-          <% } %>
-        </h2>
-
-    </td><td valign="top" align="right">
-
-        <nav aria-label="Page navigation">
-            <ul class="pagination">
-                <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
-                    <a href="javascript: step_left();">&laquo;</a>
-                </li>
-            <% for my $number ($pager->pages_in_spread) { %>
-                <% if ($number) { %>
-                <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
-                    <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
-                </li>
-                <% } else { %>
-                <li class="disabled"><a href="javascript:void">...</a></li>
-                <% } %>
+            <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
+            <% for my $i (0 .. $#$titles) { %>
+                %= include 'title', obj => $titles->[$i], i => $i, DEBUG => $DEBUG
             <% } %>
-                <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
-                    <a href="javascript: step_right();">&raquo;</a>
-                </li>
-            </ul>
-        </nav>
-
-    </td></tr></table>
-
-<div class="panel-group" id="accordion" role="tablist" aria-multiselectable="false">
-<% for my $i (0 .. $#$titles) { %>
-  <% my $obj = $titles->[$i]; %>
-  <div class="panel panel-default">
-    <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
-      <h6 class="panel-title">
-        <a onclick="javascript: step_here(<%= $i %>)" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
-            <%= $obj->{title} %> (<%= $obj->{year} %>)
-        </a>
-      </h4>
-    </div>
-    <div id="collapse-<%= $obj->{title_id} %>" class="panel-collapse collapse <%= $i ? '' : 'in' %>" role="tabpanel" aria-labelledby="heading-<%= $obj->{title_id} %>">
-      <div class="panel-body">
-
-        <table width="100%"><tr><td valign="top">
-            <table class="table-striped details">
-              <tr>
-                <th><span class="glyphicon glyphicon-film alert-success" aria-hidden="true" data-toggle="tooltip" title="IMDB ID"></span></th>
-                <td><span class="badge alert-success"><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></span></td>
-              </tr>
-              <tr>
-                <th><span class="glyphicon glyphicon-calendar" aria-hidden="true" data-toggle="tooltip" title="Year"></span></th>
-                <td><span class="badge alert-success"><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></span></td>
-              </tr>
-              <tr>
-                <th><span class="glyphicon glyphicon-bullhorn" aria-hidden="true" data-toggle="tooltip" title="Director"></span></th>
-                <td>
-                <% for (@{$obj->{directors} || []}) { %>
-                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'director', '$_->{person_id}' )" %></span>
-                <% } %>
-                </td>
-              </tr>
-              <tr>
-                <th><span class="glyphicon glyphicon-pencil" aria-hidden="true" data-toggle="tooltip" title="Writer"></span></th>
-                <td>
-                <% for (@{$obj->{writers} || []}) { %>
-                    <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'writer', '$_->{person_id}' )" %></span>
-                <% } %>
-                </td>
-              </tr>
-              <tr>
-                <th><span class="glyphicon glyphicon-list-alt" aria-hidden="true" data-toggle="tooltip" title="Genres"></span></th>
-                <td>
-                <% for (sort { $a->{genre_name} cmp $b->{genre_name} } @{$obj->{genres} || []}) { %>
-                    <span class="badge alert-success"><%= link_to ucfirst($_->{genre_name}) => "javascript: by_link( 'genre', '$_->{genre_id}' )" %></span>
-                <% } %>
-                </td>
-              </tr>
-              <tr>
-                <th><span class="glyphicon glyphicon-tags" aria-hidden="true" data-toggle="tooltip" title="Tags"></span></th>
-                <td>
-                    <div id="tag-<%= $obj->{title_id} %>" width="100%">
-                    <% for (@{$obj->{tags}}) { %>
-                      <% if ($DEBUG) { %>
-                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
-                            <%= $_->{tag} %> <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
-                        </span>
-                      <% } else { %>
-                        <span class="badge alert-success"><%= link_to $_->{tag} => "javascript: by_link( 'tag', '$_->{tag_id}' )" %></span>
-                      <% } %>
-                    <% } %>
-                    <% unless (@{ $obj->{tags} || {} }) { %>
-                      <% if ($DEBUG) { %>
-                        <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">
-                            add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
-                        </span>
-                      <% } %>
-                    <% } %>
-                    </div>
-                </td>
-              </tr>
-              <% if ($DEBUG) { %>
-              <tr>
-                <th><span class="glyphicon glyphicon-briefcase" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
-                <td><span style="font-size: x-small"><%== $obj->{story} %></span></td>
-              </tr>
-              <% } %>
-              <tr>
-                <td>&nbsp;</td>
-                <td align="center">
-                  <% if ($obj->{ratio}) { %>
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span>
-                        <%= $obj->{ratio} %>
-                    </span>
-                  <% } %>
-                  <% for (@{$obj->{durations} || []}) { %>
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span>
-                        <%= $_ %>
-                    </span>
-                  <% } %>
-                </td>
-              </tr>
-
-            <% for (@{$obj->{files} || []}) { %>
-              <% my $f = $_->{file_name}; %>
-              <% my $s = substr( $f, 0, 60 ); %>
-              <tr>
-                <th><span class="glyphicon glyphicon-folder-open alert-warning" aria-hidden="true" data-toggle="tooltip" title="File"></span></th>
-                <td><span class="badge alert-warning"><% if ($f eq $s) { %><%= $f %><% } else { %><abbr title="<%= $f %>"><%= $s %></abbr><% } %></span></td>
-              </tr>
-              <tr>
-                <td>&nbsp;</td>
-                <td align="center">
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Actual Ratio"></span>
-                        <%= $_->{actual_ratio} %>
-                    </span>
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Actual Duration"></span>
-                        <%= $_->{actual_duration} %>
-                    </span>
-
-                    <br />
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-fullscreen" aria-hidden="true" data-toggle="tooltip" title="Dimension"></span>
-                        <%= join 'x', $_->{width}, $_->{height} %>
-                    </span>
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-file" aria-hidden="true" data-toggle="tooltip" title="Actual Size"></span>
-                        <%= $_->{actual_size} %>
-                    </span>
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span>
-                        <%= $_->{frame_rate} %>
-                    </span>
-
-                    <br />
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-tasks" aria-hidden="true" data-toggle="tooltip" title="Audio Channels"></span>
-                        <%= $_->{audio_channels} %>
-                    </span>
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true" data-toggle="tooltip" title="Audio Format"></span>
-                        <%= $_->{audio_format} %>
-                    </span>
-
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-headphones" aria-hidden="true" data-toggle="tooltip" title="Audio Sample Rate"></span>
-                        <%= $_->{audio_sample_rate} %>
-                    </span>
-
-                    <% if ($_->{source}) { %>
-                    <br />
-                    <span class="badge alert-warning">
-                        <span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span>
-                        <%= (split( /\./, $_->{source}, 2 ))[0] %>
-                    </span>
-                    <% } %>
-                </td>
-              </tr>
-            <% } %>
-
-            </table>
-        </td><td width="30%" align="right" valign="top">
-
-            <div align="center" class="btn-group" data-toggle="buttons">
-              <label id="thumbs-up-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'up', <%= $obj->{title_id} %> )" class="btn btn-link'">
-                <input type="checkbox" />
-                <span float="right" class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> &nbsp;
-              </label>
             </div>
+        </div>
 
-            <div align="center" class="btn-group" data-toggle="buttons">
-              <label id="thumbs-down-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'down', <%= $obj->{title_id} %> )" class="btn btn-link'">
-                <input type="checkbox" />
-                <span float="right" class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
-              </label>
-            </div>
-
-            <div>
-                <img class="img-thumbnail" src="<%= $obj->{cover} %>" />
-            </div>
-
-        </td></tr></table>
-
-      </div>
-    </div>
-  </div>
-<% } %>
-</div>
-
-    </div>
-    <div class="col-md-5">
+        <div class="col-md-5">
         <br />
         %= include 'form',          query => $query, field => $field, pre => $pre, post => $post, per => $per, 'sort' => $sort
         %= include 'sort-links',    'sort' => $sort
@@ -703,9 +490,231 @@ __DATA__
         %= include 'alpha-links',   query => $query, list => [ 'a' .. 'z' ]
         %= include 'per-page',      per => $per, list => [ 10,25,50,100,200 ]
         %= include 'tag-cloud',     cloud => $cloud, query => $query
+        </div>
     </div>
-  </div>
 </div>
+
+@@ title.html.ep
+<div class="panel panel-default">
+    <div class="panel-heading" role="tab" id="heading-<%= $obj->{title_id} %>">
+
+        <h6 class="panel-title">
+        <a onclick="javascript: step_here(<%= $i %>)" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapse-<%= $obj->{title_id} %>" aria-expanded="<%= $i ? 'true' : 'false' %>" <%= $i ? 'class="collapsed"' : '' %> aria-controls="collapse-<%= $obj->{title_id} %>">
+            <%= $obj->{title} %> (<%= $obj->{year} %>)
+        </a>
+        </h6>
+
+    </div>
+    <div id="collapse-<%= $obj->{title_id} %>" class="panel-collapse collapse <%= $i ? '' : 'in' %>" role="tabpanel" aria-labelledby="heading-<%= $obj->{title_id} %>">
+        <div class="panel-body">
+
+            <table width="100%"><tr><td valign="top">
+                %= include 'title-details', obj => $obj, DEBUG => $DEBUG
+            </td><td width="30%" align="right" valign="top">
+                %= include 'voting', obj => $obj
+                <div><img class="img-thumbnail" src="<%= $obj->{cover} %>" /></div>
+            </td></tr></table>
+
+        </div>
+    </div>
+</div>
+
+@@ title-details.html.ep
+<table class="table-striped details">
+  <tr>
+    <th><span class="glyphicon glyphicon-film alert-success" aria-hidden="true" data-toggle="tooltip" title="IMDB ID"></span></th>
+    <td><span class="badge alert-success"><%= link_to $obj->{imdb_id} => "http://www.imdb.com/title/$obj->{imdb_id}", target => '_blank' %></span></td>
+  </tr>
+  <tr>
+    <th><span class="glyphicon glyphicon-calendar" aria-hidden="true" data-toggle="tooltip" title="Year"></span></th>
+    <td><span class="badge alert-success"><%= link_to $obj->{year} => "javascript: by_link( 'year', '$obj->{year}' )" %></span></td>
+  </tr>
+  <tr>
+    <th><span class="glyphicon glyphicon-bullhorn" aria-hidden="true" data-toggle="tooltip" title="Director"></span></th>
+    <td>
+    <% for (@{$obj->{directors} || []}) { %>
+        <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'director', '$_->{person_id}' )" %></span>
+    <% } %>
+    </td>
+  </tr>
+  <tr>
+    <th><span class="glyphicon glyphicon-pencil" aria-hidden="true" data-toggle="tooltip" title="Writer"></span></th>
+    <td>
+    <% for (@{$obj->{writers} || []}) { %>
+        <span class="badge alert-success"><%= link_to $_->{person_name} => "javascript: by_link( 'writer', '$_->{person_id}' )" %></span>
+    <% } %>
+    </td>
+  </tr>
+  <tr>
+    <th><span class="glyphicon glyphicon-list-alt" aria-hidden="true" data-toggle="tooltip" title="Genres"></span></th>
+    <td>
+    <% for (sort { $a->{genre_name} cmp $b->{genre_name} } @{$obj->{genres} || []}) { %>
+        <span class="badge alert-success"><%= link_to ucfirst($_->{genre_name}) => "javascript: by_link( 'genre', '$_->{genre_id}' )" %></span>
+    <% } %>
+    </td>
+  </tr>
+  <tr>
+    <th><span class="glyphicon glyphicon-tags" aria-hidden="true" data-toggle="tooltip" title="Tags"></span></th>
+    <td>
+        <div id="tag-<%= $obj->{title_id} %>" width="100%">
+        <% for (@{$obj->{tags}}) { %>
+          <% if ($DEBUG) { %>
+            <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '<%= join( ' ', map $_->{tag}, @{$obj->{tags}} ) %>' )">
+                <%= $_->{tag} %> <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+            </span>
+          <% } else { %>
+            <span class="badge alert-success"><%= link_to $_->{tag} => "javascript: by_link( 'tag', '$_->{tag_id}' )" %></span>
+          <% } %>
+        <% } %>
+        <% unless (@{ $obj->{tags} || {} }) { %>
+          <% if ($DEBUG) { %>
+            <span class="badge alert-success" onclick="javascript: edit_tag( <%= $obj->{title_id} %>, '' )">
+                add tags <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+            </span>
+          <% } %>
+        <% } %>
+        </div>
+    </td>
+  </tr>
+  <% if ($DEBUG) { %>
+  <tr>
+    <th><span class="glyphicon glyphicon-briefcase" aria-hidden="true" data-toggle="tooltip" title="Story"></span></th>
+    <td><span style="font-size: x-small"><%== $obj->{story} %></span></td>
+  </tr>
+  <% } %>
+  <tr>
+    <td>&nbsp;</td>
+    <td align="center">
+      <% if ($obj->{ratio}) { %>
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Aspect Ratio"></span>
+            <%= $obj->{ratio} %>
+        </span>
+      <% } %>
+      <% for (@{$obj->{durations} || []}) { %>
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Durations"></span>
+            <%= $_ %>
+        </span>
+      <% } %>
+    </td>
+  </tr>
+
+%= include 'files', files => $obj->{files} || []
+
+</table>
+
+@@ files.html.ep
+<% for (@$files) { %>
+  <% my $f = $_->{file_name}; %>
+  <% my $s = substr( $f, 0, 60 ); %>
+  <tr>
+    <th><span class="glyphicon glyphicon-folder-open alert-warning" aria-hidden="true" data-toggle="tooltip" title="File"></span></th>
+    <td><span class="badge alert-warning"><% if ($f eq $s) { %><%= $f %><% } else { %><abbr title="<%= $f %>"><%= $s %></abbr><% } %></span></td>
+  </tr>
+  <tr>
+    <td>&nbsp;</td>
+    <td align="center">
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-picture" aria-hidden="true" data-toggle="tooltip" title="Actual Ratio"></span>
+            <%= $_->{actual_ratio} %>
+        </span>
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-hourglass" aria-hidden="true" data-toggle="tooltip" title="Actual Duration"></span>
+            <%= $_->{actual_duration} %>
+        </span>
+
+        <br />
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-fullscreen" aria-hidden="true" data-toggle="tooltip" title="Dimension"></span>
+            <%= join 'x', $_->{width}, $_->{height} %>
+        </span>
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-file" aria-hidden="true" data-toggle="tooltip" title="Actual Size"></span>
+            <%= $_->{actual_size} %>
+        </span>
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-cd" aria-hidden="true" data-toggle="tooltip" title="Frame Rate"></span>
+            <%= $_->{frame_rate} %>
+        </span>
+
+        <br />
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-tasks" aria-hidden="true" data-toggle="tooltip" title="Audio Channels"></span>
+            <%= $_->{audio_channels} %>
+        </span>
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-floppy-disk" aria-hidden="true" data-toggle="tooltip" title="Audio Format"></span>
+            <%= $_->{audio_format} %>
+        </span>
+
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-headphones" aria-hidden="true" data-toggle="tooltip" title="Audio Sample Rate"></span>
+            <%= $_->{audio_sample_rate} %>
+        </span>
+
+        <% if ($_->{source}) { %>
+        <br />
+        <span class="badge alert-warning">
+            <span class="glyphicon glyphicon-user" aria-hidden="true" data-toggle="tooltip" title="Source"></span>
+            <%= (split( /\./, $_->{source}, 2 ))[0] %>
+        </span>
+        <% } %>
+    </td>
+  </tr>
+<% } %>
+
+@@ voting.html.ep
+<div align="center" class="btn-group" data-toggle="buttons">
+  <label id="thumbs-up-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'up', <%= $obj->{title_id} %> )" class="btn btn-link'">
+    <input type="checkbox" />
+    <span float="right" class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> &nbsp;
+  </label>
+</div>
+
+<div align="center" class="btn-group" data-toggle="buttons">
+  <label id="thumbs-down-<%= $obj->{title_id} %>" onclick="javascript: thumbs( 'down', <%= $obj->{title_id} %> )" class="btn btn-link'">
+    <input type="checkbox" />
+    <span float="right" class="glyphicon glyphicon-thumbs-down" aria-hidden="true"></span>
+  </label>
+</div>
+
+@@ search-stats.html.ep
+<h2>
+  <% if ($total) { %>
+    <span class="glyphicon glyphicon-eye-open" aria-hidden="true" data-toggle="tooltip" title="<%= $total %> titles found"></span>
+    <%= $total %> <small>(<%= $curr * $per - ($per - 1) %> - <%= $curr * $per %>)</small>
+  <% } else { %>
+    <span class="glyphicon glyphicon-eye-close" aria-hidden="true" data-toggle="tooltip" title="No titles found :("></span>
+  <% } %>
+</h2>
+
+@@ pagination.html.ep
+<nav aria-label="Page navigation">
+    <ul class="pagination">
+        <li class="<%= $pager->previous_page ? '' : 'disabled' %>" aria-label="Previous">
+            <a href="javascript: step_left();">&laquo;</a>
+        </li>
+    <% for my $number ($pager->pages_in_spread) { %>
+        <% if ($number) { %>
+        <li class="<%= $pager->current_page == $number ? 'active' : '' %>">
+            <a href="javascript: fetch_results( <%= $number %> );"><%= $number %></a>
+        </li>
+        <% } else { %>
+        <li class="disabled"><a href="javascript:void">...</a></li>
+        <% } %>
+    <% } %>
+        <li class="<%= $pager->next_page ? '' : 'disabled' %>" aria-label="Next">
+            <a href="javascript: step_right();">&raquo;</a>
+        </li>
+    </ul>
+</nav>
 
 @@ form.html.ep
 <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
