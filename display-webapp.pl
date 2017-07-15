@@ -33,7 +33,33 @@ get '/input' => sub {
 
 get '/select' => sub {
     my $self = shift;
+    my $field    = $self->param( 'field' );
+    my $selected = $self->param( 'selected' );
+
+    my $query;
+    if ($field eq 'genre') {
+        $query = 'select genre_id as value, genre_name as label from genres order by label';
+    } elsif ($field eq 'director') {
+        $query = '
+            select p.person_id as value, person_name as label from people p
+            inner join role_xref x on x.person_id=p.person_id
+            where x.role_id = 1
+            order by label
+        ';
+    } elsif ($field eq 'writer') {
+        $query = '
+            select p.person_id as value, person_name as label from people p
+            inner join role_xref x on x.person_id=p.person_id
+            where x.role_id = 2
+            order by label
+        ';
+    } else { #if ($field eq 'tag') {
+        $query = 'select tag_id as value, tag as label from tags order by label';
+    }
+
     $self->stash(
+        list        => $dbh->selectall_arrayref( $query, {Slice => {}} ),
+        selected    => $selected,
         name        => $self->param( 'name' ),
         id          => $self->param( 'id' ),
         class       => $self->param( 'class' ),
@@ -371,34 +397,6 @@ sub tags {
 
 
 __DATA__
-@@ edit-tags.html.ep
-<input id="edit-tag-<%= $title_id %>" type="text" value="<%= $joined_tags %>" onblur="javascript: show_tag( '<%= $title_id %>', this )" />
-
-@@ show-tags.html.ep
-<% for my $tag (@$tags) { %>
-    <span class="badge alert-success" onclick="javascript: edit_tag( '<%= $title_id %>', '<%= $joined_tags %>' )">
-        <%= $tag %>
-        <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
-    </span>
-<% } %>
-
-@@ input.html.ep
-<input name="query" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
-
-@@ select.html.ep
-<select
-    <% if ($name) { %>name="<%= $name %>"<% } %>
-    <% if ($id) { %>id="<%= $id %>"<% } %>
-    <% if ($class) { %>class="<%= $class %>"<% } %>
-    <% if ($javascript) { %><%== $javascript %><% } %>
->
-<% for my $item (@$list) { %>
-    <option value="<%= $item->{value} %>" <%= $item->{value} eq $selected ? 'selected="1"' : '' %>>
-        <%= $item->{label} %>
-    </option>
-<% } %>
-</select>
-
 @@ index.html.ep
 <!DOCTYPE html>
 <html>
@@ -466,129 +464,7 @@ __DATA__
 </html>
 
 @@ results.html.ep
-<script type="text/javascript">
-var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
-var curr  = 0;
-
-function fetch_results( curr = 1 ) {
-    var params = $.param([
-        {name: "curr",      value: curr},
-        {name: "field",     value: document.search.field.value},
-        {name: "query",     value: document.search.query.value},
-        {name: "per",       value: document.search.per.value},
-        {name: "pre",       value: document.search.pre.value},
-        {name: "post",      value: document.search.post.value},
-        {name: "sort",      value: document.search.sort.value}
-    ]);
-
-    var url  = '/fetch?' + params;
-    _ajaxGET( url, '#results' );
-}
-
-function reset_form() {
-    document.search.per.value   = 10;
-    document.search.pre.value   = 1;
-    document.search.post.value  = 1;
-    document.search.field.value = 'sort';
-    document.search.sort.value  = 'sort';
-    document.search.query.value = '';
-    fetch_results();
-}
-
-function set_results_per( per ) {
-    document.search.per.value = per;
-    fetch_results();
-}
-
-function toggle( param ) {
-    var value = $( '#' + param ).val();
-    $( '#' + param ).val( value > 0 ? 0 : 1 );
-    var value = $( '#' + param ).val();
-    $( '#' + param + '-view' ).val( value );
-    $( '#' + param + '-button' ).toggleClass( 'btn-info' );
-    $( '#' + param + '-button' ).toggleClass( 'btn-link' );
-}
-
-function thumbs( param, title_id ) {
-    $( '#thumbs-' + param + '-' + title_id ).toggleClass( 'btn-danger' );
-}
-
-function step_left() {
-    if (<%= $pager->previous_page ? 1 : 0 %>) {
-        fetch_results( <%= $pager->previous_page %> );
-    }
-}
-
-function step_right() {
-    if (<%= $pager->next_page ? 1 : 0 %>) {
-        fetch_results( <%= $pager->next_page %> );
-    }
-}
-
-function step_up() {
-    $( '.panel-collapse' ).collapse( 'hide' );
-    if (curr < 0) return;
-    $( '#collapse-' + panes[--curr] ).collapse( 'show' );
-}
-
-function step_down() {
-    $( '.panel-collapse' ).collapse( 'hide' );
-    if (curr > <%= $#$titles %>) return;
-    $( '#collapse-' + panes[++curr] ).collapse( 'show' );
-}
-
-function step_here( new_curr ) {
-    if (new_curr > <%= $#$titles %>) return;
-    if (new_curr < 0) return;
-    $( '.panel-collapse' ).collapse( 'hide' );
-    curr = new_curr;
-}
-
-function sort_by( field ) {
-    document.search.sort.value = field;
-    fetch_results();
-}
-
-function by_link( field, value, pre = 0, post = 0, sort = 'sort' ) {
-    document.search.field.value = field;
-    document.search.query.value = value;
-    document.search.pre.value   = pre;
-    document.search.post.value  = post;
-    document.search.sort.value  = sort;
-    fetch_results();
-}
-
-function edit_tag( title_id, tags ) {
-    var params = $.param([
-        {name: "title_id",  value: title_id},
-        {name: "tags",      value: tags},
-        {name: "edit",      value: 1}
-    ]);
-
-    var url  = '/tags?' + params;
-    _ajaxGET( url, '#tag-' + title_id );
-    //$( '#edit-tag-' + title_id ).focus();
-}
-
-function show_tag( title_id, input ) {
-    var params = $.param([
-        {name: "title_id",  value: title_id},
-        {name: "tags",      value: input.value},
-    ]);
-
-    var url  = '/tags?' + params;
-    _ajaxGET( url, '#tag-' + title_id );
-}
-
-function change_query( select ) {
-
-    if (select.value == 'sort') {
-        //_ajaxGET( '/input', '#querybox' );
-    } else {
-        //_ajaxGET( '/select', '#querybox' );
-    }
-}
-</script>
+%= include 'javascript', titles => $titles, pager => $pager
 
 <div class="container-fluid">
   <div class="row">
@@ -818,136 +694,299 @@ function change_query( select ) {
 <% } %>
 </div>
 
-
-
     </div>
     <div class="col-md-5">
         <br />
-        <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
-
-            <%= include select =>
-                name        => 'field',
-                id          => 'field',
-                class       => 'form-control',
-                selected    => $field,
-                javascript  => q|onchange="javascript: change_query(this)"|,
-                list        => [
-                    { value => 'sort',      label => 'Title' },
-                    { value => 'year',      label => 'Year' },
-                    { value => 'genre',     label => 'Genre' },
-                    { value => 'director',  label => 'Director' },
-                    { value => 'writer',    label => 'Writer' },
-                    { value => 'tag',       label => 'Tag' },
-                ],
-            %>
-
-            <div class="btn-group" data-toggle="buttons">
-              <label id="pre-button" onclick="javascript: toggle('pre')" class="btn <%= $pre ? 'btn-info active' : 'btn-link' %>">
-                <input type="checkbox" />%
-              </label>
-            </div>
-
-            <span id="querybox"><%= include input => query => $query %></span>
-
-            <div class="btn-group" data-toggle="buttons">
-              <label id="post-button" onclick="javascript: toggle('post')" class="btn <%= $post ? 'btn-info active' : 'btn-link' %>">
-                <input type="checkbox" />%
-              </label>
-            </div>
-
-            <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="Loading...">
-                <span float="right" class="glyphicon glyphicon-search" aria-hidden="true"></span>
-            </button>
-
-            <input id="curr" name="curr" type="hidden" />
-            <input id="pre"  name="pre"  type="hidden" value="<%= $pre %>" />
-            <input id="post" name="post" type="hidden" value="<%= $post %>" />
-            <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
-            <input id="sort" name="sort" type="hidden" value="<%= $sort %>" />
-
-        </form>
-
-      <table width="90%"><tr><td>
-        <nav aria-label="Sort navigation">
-          <ul class="pagination">
-             <li class="disabled"><a>Title</a></li>
-             <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'sort' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
-             </li>
-             <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'sortD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
-             </li>
-          </ul>
-          <ul class="pagination">
-             <li class="disabled"><a>Year</a></li>
-             <li class="<%= $sort eq 'year' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'year' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
-             </li>
-             <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'yearD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
-             </li>
-          </ul>
-          <ul class="pagination">
-             <li class="disabled"><a>Added</a></li>
-             <li class="<%= $sort eq 'added' ? 'active' : '' %>">
-                  <a href="javascript: sort_by( 'added' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
-             </li>
-          </ul>
-        </nav>
-      </td><td align="right">
-
-        <button id="go" class="btn btn-primary" type="button" onclick="javascript: reset_form()">
-            <span float="right" class="glyphicon glyphicon-refresh" aria-hidden="true"></span>
-        </button>
-
-      </td></tr></table>
-
-
-        <div>
-        <% for ( [19,20], [19,30], [19,40], [19,50], [19,60], [19,70], [19,80], [19,90], [20,'00'], [20,10] ) { %>
-            <% my $year = join '', @$_; chop $year; %>
-            <div class="btn-group" data-toggle="buttons">
-              <label id="pre-button" style="font-size: 8pt" onclick="javascript: by_link( 'year', '<%= $year %>', 0, 1, 'year' )" class="btn <%= $query eq $year ? 'btn-info active' : 'btn-link' %>">
-                <%= $_->[1] . "s" %>
-              </label>
-            </div>
-        <% } %>
-        </div>
-
-        <div>
-        <% for ('a' .. 'z') { %>
-            <div class="btn-group" data-toggle="buttons">
-              <label id="pre-button" style="font-size: 9pt" onclick="javascript: by_link( 'sort', '<%= $_ %>', 0, 1 )" class="btn <%= $query eq $_ ? 'btn-info active' : 'btn-link' %>">
-                <%= $_ %>
-              </label>
-            </div>
-        <% } %>
-        </div>
-
-        <nav aria-label="Sort navigation">
-
-          <ul class="pagination">
-              <li class="disabled"><a>Per Page:</a></li>
-            <% for my $number (10,25,50,100,200) { %>
-              <li class="<%= $number == $per ? 'active' : '' %>">
-                  <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
-              </li>
-            <% } %>
-          </ul>
-
-        </nav>
-
-        <div>
-          <% for my $tag (@$cloud) { %>
-            <% next if $tag->{size} < 6; %>
-            <% if ($query eq $tag->{tag_id}) { %>
-                <u style="<%= sprintf('font-size: %dpt', $tag->{size}) %>"><%= $tag->{tag} %></u>
-            <% } else { %>
-                <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
-            <% } %>
-          <% } %>
-        </div>
-
+        %= include 'form',          query => $query, field => $field, pre => $pre, post => $post, per => $per, 'sort' => $sort
+        %= include 'sort-links',    'sort' => $sort
+        %= include 'year-links',    query => $query, list => [ [19,20], [19,30], [19,40], [19,50], [19,60], [19,70], [19,80], [19,90], [20,'00'], [20,10] ]
+        %= include 'alpha-links',   query => $query, list => [ 'a' .. 'z' ]
+        %= include 'per-page',      per => $per, list => [ 10,25,50,100,200 ]
+        %= include 'tag-cloud',     cloud => $cloud, query => $query
     </div>
   </div>
 </div>
+
+@@ form.html.ep
+<form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
+
+    <button class="btn btn-primary" type="button" onclick="javascript: reset_form()">
+        <span float="right" class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
+    </button>
+
+    <%= include select =>
+        name        => 'field',
+        id          => 'field',
+        class       => 'form-control',
+        selected    => $field,
+        javascript  => qq|onchange="javascript: change_query( this, 'query', '$query' )"|,
+        list        => [
+            { value => 'sort',      label => 'Title' },
+            { value => 'year',      label => 'Year' },
+            { value => 'genre',     label => 'Genre' },
+            { value => 'director',  label => 'Director' },
+            { value => 'writer',    label => 'Writer' },
+            { value => 'tag',       label => 'Tag' },
+        ],
+    %>
+
+    <div class="btn-group" data-toggle="buttons">
+      <label id="pre-button" onclick="javascript: toggle('pre')" class="btn <%= $pre ? 'btn-info active' : 'btn-link' %>">
+        <input type="checkbox" />%
+      </label>
+    </div>
+
+    <span id="querybox"><%= include input => query => $query %></span>
+
+    <div class="btn-group" data-toggle="buttons">
+      <label id="post-button" onclick="javascript: toggle('post')" class="btn <%= $post ? 'btn-info active' : 'btn-link' %>">
+        <input type="checkbox" />%
+      </label>
+    </div>
+
+    <button id="go" class="btn btn-primary" type="button" onclick="javascript: fetch_results()" data-loading-text="...">
+        <span float="right" class="glyphicon glyphicon-search" aria-hidden="true"></span>
+    </button>
+
+    <input id="curr" name="curr" type="hidden" />
+    <input id="pre"  name="pre"  type="hidden" value="<%= $pre %>" />
+    <input id="post" name="post" type="hidden" value="<%= $post %>" />
+    <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
+    <input id="sort" name="sort" type="hidden" value="<%= $sort %>" />
+
+</form>
+
+@@ edit-tags.html.ep
+<input id="edit-tag-<%= $title_id %>" type="text" value="<%= $joined_tags %>" onblur="javascript: show_tag( '<%= $title_id %>', this )" />
+
+@@ show-tags.html.ep
+<% for my $tag (@$tags) { %>
+    <span class="badge alert-success" onclick="javascript: edit_tag( '<%= $title_id %>', '<%= $joined_tags %>' )">
+        <%= $tag %>
+        <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"></span>
+    </span>
+<% } %>
+
+@@ input.html.ep
+<input name="query" class="form-control" type="text" placeholder="ALL" value="<%= $query %>" />
+
+@@ select.html.ep
+<select
+    <% if ($name) { %>name="<%= $name %>"<% } %>
+    <% if ($id) { %>id="<%= $id %>"<% } %>
+    <% if ($class) { %>class="<%= $class %>"<% } %>
+    <% if ($javascript) { %><%== $javascript %><% } %>
+>
+<% for my $item (@$list) { %>
+    <option value="<%= $item->{value} %>" <%= $item->{value} eq $selected ? 'selected="1"' : '' %>>
+        <%= $item->{label} %>
+    </option>
+<% } %>
+</select>
+
+@@ per-page.html.ep
+<nav aria-label="Sort navigation">
+  <ul class="pagination">
+    <li class="disabled"><a>Per Page:</a></li>
+    <% for my $number (@$list) { %>
+      <li class="<%= $number == $per ? 'active' : '' %>">
+          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+    </li>
+    <% } %>
+  </ul>
+</nav>
+
+@@ sort-links.html.ep
+<nav aria-label="Sort navigation">
+  <ul class="pagination">
+     <li class="disabled"><a>Title</a></li>
+     <li class="<%= $sort eq 'sort' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'sort' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
+     </li>
+     <li class="<%= $sort eq 'sortD' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'sortD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
+     </li>
+  </ul>
+  <ul class="pagination">
+     <li class="disabled"><a>Year</a></li>
+     <li class="<%= $sort eq 'year' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'year' );"><span class="glyphicon glyphicon-sort-by-attributes" aria-hidden="true"></a>
+     </li>
+     <li class="<%= $sort eq 'yearD' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'yearD' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
+     </li>
+  </ul>
+  <ul class="pagination">
+     <li class="disabled"><a>Added</a></li>
+     <li class="<%= $sort eq 'added' ? 'active' : '' %>">
+          <a href="javascript: sort_by( 'added' );"><span class="glyphicon glyphicon-sort-by-attributes-alt" aria-hidden="true"></a>
+     </li>
+  </ul>
+</nav>
+
+@@ year-links.html.ep
+<div>
+<% for (@$list) { %>
+    <% my $year = join '', @$_; chop $year; %>
+    <div class="btn-group" data-toggle="buttons">
+      <label id="pre-button" style="font-size: 8pt" onclick="javascript: by_link( 'year', '<%= $year %>', 0, 1, 'year' )" class="btn <%= $query eq $year ? 'btn-info active' : 'btn-link' %>">
+        <%= $_->[1] . "s" %>
+      </label>
+    </div>
+<% } %>
+</div>
+
+@@ alpha-links.html.ep
+<div>
+<% for (@$list) { %>
+    <div class="btn-group" data-toggle="buttons">
+      <label id="pre-button" style="font-size: 9pt" onclick="javascript: by_link( 'sort', '<%= $_ %>', 0, 1 )" class="btn <%= $query eq $_ ? 'btn-info active' : 'btn-link' %>">
+        <%= $_ %>
+      </label>
+    </div>
+<% } %>
+</div>
+
+@@ tag-cloud.html.ep
+<div>
+  <% for my $tag (@$cloud) { %>
+    <% next if $tag->{size} < 6; %>
+    <% if ($query eq $tag->{tag_id}) { %>
+        <u style="<%= sprintf('font-size: %dpt', $tag->{size}) %>"><%= $tag->{tag} %></u>
+    <% } else { %>
+        <%= link_to $tag->{tag} => "javascript: by_link( 'tag', '$tag->{tag_id}' )", style => sprintf('font-size: %dpt', $tag->{size}) %>
+    <% } %>
+  <% } %>
+</div>
+
+@@ javascript.html.ep
+<script type="text/javascript">
+var panes = [ <%= join( ', ', map $_->{title_id}, @$titles ) %> ];
+var curr  = 0;
+
+function fetch_results( curr = 1 ) {
+    var params = $.param([
+        {name: "curr",      value: curr},
+        {name: "field",     value: document.search.field.value},
+        {name: "query",     value: document.search.query.value},
+        {name: "per",       value: document.search.per.value},
+        {name: "pre",       value: document.search.pre.value},
+        {name: "post",      value: document.search.post.value},
+        {name: "sort",      value: document.search.sort.value}
+    ]);
+
+    var url  = '/fetch?' + params;
+    _ajaxGET( url, '#results' );
+}
+
+function reset_form() {
+    document.search.per.value   = 10;
+    document.search.pre.value   = 1;
+    document.search.post.value  = 1;
+    document.search.field.value = 'sort';
+    document.search.sort.value  = 'sort';
+    document.search.query.value = '';
+    fetch_results();
+}
+
+function set_results_per( per ) {
+    document.search.per.value = per;
+    fetch_results();
+}
+
+function toggle( param ) {
+    var value = $( '#' + param ).val();
+    $( '#' + param ).val( value > 0 ? 0 : 1 );
+    var value = $( '#' + param ).val();
+    $( '#' + param + '-view' ).val( value );
+    $( '#' + param + '-button' ).toggleClass( 'btn-info' );
+    $( '#' + param + '-button' ).toggleClass( 'btn-link' );
+}
+
+function thumbs( param, title_id ) {
+    $( '#thumbs-' + param + '-' + title_id ).toggleClass( 'btn-danger' );
+}
+
+function step_left() {
+    if (<%= $pager->previous_page ? 1 : 0 %>) {
+        fetch_results( <%= $pager->previous_page %> );
+    }
+}
+
+function step_right() {
+    if (<%= $pager->next_page ? 1 : 0 %>) {
+        fetch_results( <%= $pager->next_page %> );
+    }
+}
+
+function step_up() {
+    $( '.panel-collapse' ).collapse( 'hide' );
+    if (curr < 0) return;
+    $( '#collapse-' + panes[--curr] ).collapse( 'show' );
+}
+
+function step_down() {
+    $( '.panel-collapse' ).collapse( 'hide' );
+    if (curr > <%= $#$titles %>) return;
+    $( '#collapse-' + panes[++curr] ).collapse( 'show' );
+}
+
+function step_here( new_curr ) {
+    if (new_curr > <%= $#$titles %>) return;
+    if (new_curr < 0) return;
+    $( '.panel-collapse' ).collapse( 'hide' );
+    curr = new_curr;
+}
+
+function sort_by( field ) {
+    document.search.sort.value = field;
+    fetch_results();
+}
+
+function by_link( field, value, pre = 0, post = 0, sort = 'sort' ) {
+    document.search.field.value = field;
+    document.search.query.value = value;
+    document.search.pre.value   = pre;
+    document.search.post.value  = post;
+    document.search.sort.value  = sort;
+    fetch_results();
+}
+
+function edit_tag( title_id, tags ) {
+    var params = $.param([
+        {name: "title_id",  value: title_id},
+        {name: "tags",      value: tags},
+        {name: "edit",      value: 1}
+    ]);
+
+    var url  = '/tags?' + params;
+    _ajaxGET( url, '#tag-' + title_id );
+    //$( '#edit-tag-' + title_id ).focus();
+}
+
+function show_tag( title_id, input ) {
+    var params = $.param([
+        {name: "title_id",  value: title_id},
+        {name: "tags",      value: input.value},
+    ]);
+
+    var url  = '/tags?' + params;
+    _ajaxGET( url, '#tag-' + title_id );
+}
+
+function change_query( select, name, selected ) {
+
+    if (select.value == 'genre' || select.value == 'tag') {
+        var params = $.param([
+            {name: "field",     value: select.value},
+            {name: "name",      value: name},
+            {name: "class",     value: "form-control"},
+            {name: "selected",  value: selected},
+        ]);
+        _ajaxGET( '/select?' + params, '#querybox' );
+    } else {
+        _ajaxGET( '/input', '#querybox' );
+    }
+}
+</script>
+
