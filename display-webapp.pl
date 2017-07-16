@@ -488,7 +488,7 @@ __DATA__
         %= include 'sort-links',    'sort' => $sort
         %= include 'year-links',    query => $query, list => [ [19,20], [19,30], [19,40], [19,50], [19,60], [19,70], [19,80], [19,90], [20,'00'], [20,10] ]
         %= include 'alpha-links',   query => $query, list => [ 'a' .. 'z' ]
-        %= include 'per-page',      per => $per, list => [ 10,25,50,100,200 ]
+        %= include 'per-page',      per => $per, list => [ 10,25,50,100,250,500 ]
         %= include 'tag-cloud',     cloud => $cloud, query => $query
         </div>
     </div>
@@ -999,3 +999,66 @@ function change_query( select, name, selected ) {
 }
 </script>
 
+@@ results.xml.ep
+<?xml version="1.0" encoding="UTF-8"?>
+<titles>
+<% for my $title (@$titles) { %>
+    <title>
+        <title><%= $title->{title} %></title>
+        <imdb_id><%= $title->{imdb_id} %></imdb_id>
+        <year><%= $title->{year} %></year>
+        <cover><%= $title->{cover} %></cover>
+        <tagline><%= $title->{tagline} %></tagline>
+        <story><%= $title->{story} %></story>
+        <directors>
+        <% for (@{$title->{directors} || []}) { %>
+            <director>
+                <id><%= $_->{person_id} %></id>
+                <name><%= $_->{person_name} %></name>
+            </director>
+        <% } %>
+        </directors>
+        <writers>
+        <% for (@{$title->{writers} || []}) { %>
+            <writer>
+                <id><%= $_->{person_id} %></id>
+                <name><%= $_->{person_name} %></name>
+            </writer>
+        <% } %>
+        </writers>
+        <genres>
+        <% for (@{$title->{genres} || []}) { %>
+            <genre>
+                <id><%= $_->{genre_id} %></id>
+                <name><%= $_->{genre_name} %></name>
+            </genre>
+        <% } %>
+        </genres>
+        <tags>
+        <% for (@{$title->{tags} || []}) { %>
+            <tag>
+                <id><%= $_->{tag} %></id>
+                <name><%= $_->{tag_id} %></name>
+            </tag>
+        <% } %>
+        </tags>
+        <files>
+        <% for (@{$title->{files} || []}) { %>
+            <file>
+                <filename><%= $_->{file_name} %></filename>
+                <ratio><%= $_->{actual_ratio} %></ratio>
+                <duration><%= $_->{actual_duration} %></duration>
+                <width><%= $_->{width} %></width>
+                <height><%= $_->{height} %></height>
+                <size><%= $_->{actual_size} %></size>
+                <frame_rate><%= $_->{frame_rate} %></frame_rate>
+                <audio_channels><%= $_->{audio_channels} %></audio_channels>
+                <audio_format><%= $_->{audio_format} %></audio_format>
+                <audio_sample_rate><%= $_->{audio_sample_rate} %></audio_sample_rate>
+                <source><%= $_->{source} %></source>
+            </file>
+        <% } %>
+        </files>
+    </title>
+<% } %>
+</titles>
