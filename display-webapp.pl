@@ -378,7 +378,11 @@ get '/fetch' => sub {
         DEBUG  => $DEBUG,
     );
 
-    $self->render( template => 'results' );
+    $self->respond_to(
+      json => { json => { titles => $titles } },
+      xml  => sub { $self->render( template => 'results' ) },
+      html => sub { $self->render( template => 'results' ) },
+    );
 };
 
 app->start( daemon => '-l', 'http://*:3000' );
