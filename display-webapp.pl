@@ -761,7 +761,7 @@ __DATA__
         <span float="right" class="glyphicon glyphicon-search" aria-hidden="true"></span>
     </button>
 
-    <input id="curr" name="curr" type="hidden" />
+    <input id="curr" name="curr" type="hidden" value="<%= $curr %>" />
     <input id="pre"  name="pre"  type="hidden" value="<%= $pre %>" />
     <input id="post" name="post" type="hidden" value="<%= $post %>" />
     <input id="per"  name="per"  type="hidden" value="<%= $per %>" />
@@ -798,16 +798,25 @@ __DATA__
 </select>
 
 @@ per-page.html.ep
-<nav aria-label="Sort navigation">
-  <ul class="pagination">
-    <li class="disabled"><a>Per Page:</a></li>
-    <% for my $number (@$list) { %>
-      <li class="<%= $number == $per ? 'active' : '' %>">
-          <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
-    </li>
-    <% } %>
-  </ul>
-</nav>
+<table width="100%"><tr><td>
+    <nav aria-label="Sort navigation">
+      <ul class="pagination">
+        <li class="disabled"><a>Per Page:</a></li>
+        <% for my $number (@$list) { %>
+          <li class="<%= $number == $per ? 'active' : '' %>">
+              <a href="javascript: set_results_per( <%= $number %> );"><%= $number %></a>
+        </li>
+        <% } %>
+      </ul>
+    </nav>
+</td><td align="right">
+    <nav aria-label="Data format">
+      <ul class="pagination">
+        <li><a href="javascript: format( 'xml' );">xml</a></li>
+        <li><a href="javascript: format( 'json' );">json</a></li>
+      </ul>
+    </nav>
+</td></tr></table>
 
 @@ sort-links.html.ep
 <nav aria-label="Sort navigation">
@@ -963,6 +972,22 @@ function by_link( field, value, pre = 0, post = 0, sort = 'sort' ) {
     document.search.post.value  = post;
     document.search.sort.value  = sort;
     fetch_results();
+}
+
+function format( format ) {
+
+    var params = $.param([
+        {name: "field",     value: document.search.field.value},
+        {name: "query",     value: document.search.query.value},
+        {name: "sort",      value: document.search.sort.value},
+        {name: "pre",       value: document.search.pre.value},
+        {name: "post",      value: document.search.post.value},
+        {name: "per",       value: document.search.per.value},
+        {name: "curr",      value: document.search.curr.value},
+    ]);
+
+    var url = '/fetch.' + format + '?' + params;
+    window.location.href = url;
 }
 
 function edit_tag( title_id, tags ) {
