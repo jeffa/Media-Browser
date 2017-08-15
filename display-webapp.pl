@@ -240,10 +240,10 @@ get '/fetch' => sub {
 
     my @cloud;
     my $last = 999_999_999;
-    my $size = 23;
+    my $size = 20;
     for my $count (sort { $b <=> $a } keys %cloud) {
         if ($last != $count) {
-            $size = $size - .5;
+            $size = $size - .4;
         }
 
         $_->{size} = $size for @{ $cloud{$count} };
@@ -381,6 +381,7 @@ get '/fetch' => sub {
     $self->respond_to(
       json => { json => { titles => $titles } },
       xml  => sub { $self->render( template => 'results' ) },
+      txt  => sub { $self->render( template => 'results' ) },
       html => sub { $self->render( template => 'results' ) },
     );
 };
@@ -724,7 +725,7 @@ __DATA__
 <form class="form-inline" action="javascript: void(0);" id="search" name="search" class="navbar-search">
 
     <button class="btn btn-primary" type="button" onclick="javascript: reset_form()">
-        <span float="right" class="glyphicon glyphicon-step-backward" aria-hidden="true"></span>
+        <span float="right" class="glyphicon glyphicon-home" aria-hidden="true"></span>
     </button>
 
     <%= include select =>
@@ -870,9 +871,9 @@ __DATA__
 </div>
 
 @@ tag-cloud.html.ep
-<div>
+<div class="jumbotron">
   <% for my $tag (@$cloud) { %>
-    <% next if $tag->{size} < 6; %>
+    <% next if $tag->{size} < 8; %>
     <% if ($query eq $tag->{tag_id}) { %>
         <u style="<%= sprintf('font-size: %dpt', $tag->{size}) %>"><%= $tag->{tag} %></u>
     <% } else { %>
@@ -1091,3 +1092,8 @@ function change_query( select, name, selected ) {
     </title>
 <% } %>
 </titles>
+
+@@ results.txt.ep
+<% for my $title (@$titles) { =%>
+title="<%== $title->{title} %>" id=<%= $title->{imdb_id} %> year=<%= $title->{year} %> cover=<%= $title->{cover} %>
+<% } =%>
