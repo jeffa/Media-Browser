@@ -7,3 +7,4 @@ DUMP.sql
 nohup.out
 data/
 *.json
+movies.txt
