@@ -36,6 +36,19 @@ get '/select' => sub {
     my $field    = $self->param( 'field' );
     my $selected = $self->param( 'selected' );
 
+    $self->stash(
+        list        => render_select( $field ),
+        selected    => $selected,
+        name        => $self->param( 'name' ),
+        id          => $self->param( 'id' ),
+        class       => $self->param( 'class' ),
+        javascript  => $self->param( 'javascript' ),
+    );
+    $self->render( template => 'select' );
+};
+
+sub render_select {
+    my $field = shift;
     my $query;
     if ($field eq 'genre') {
         $query = 'select genre_id as value, genre_name as label from genres order by label';
@@ -53,20 +66,14 @@ get '/select' => sub {
             where x.role_id = 2
             order by label
         ';
-    } else { #if ($field eq 'tag') {
+    } elsif ($field eq 'tag') {
         $query = 'select tag_id as value, tag as label from tags order by label';
+    } else {
+        return [];
     }
 
-    $self->stash(
-        list        => $dbh->selectall_arrayref( $query, {Slice => {}} ),
-        selected    => $selected,
-        name        => $self->param( 'name' ),
-        id          => $self->param( 'id' ),
-        class       => $self->param( 'class' ),
-        javascript  => $self->param( 'javascript' ),
-    );
-    $self->render( template => 'select' );
-};
+    return $dbh->selectall_arrayref( $query, {Slice => {}} ),
+}
 
 get '/tags' => sub {
     my $self = shift;
@@ -83,7 +90,6 @@ get '/tags' => sub {
     my %all = map { @$_ } @$sth;
 
     my @to_add = map { $old{$_} ? () : $all{$_} || $_ } keys %new;
-    warn "add = @to_add\n";
     my @tag_ids;
     for my $tag (@to_add) {
         if ($tag =~ /\D/) {
@@ -152,6 +158,7 @@ get '/fetch' => sub {
         $dbh = get_dbh();
     }
 
+    my $select;
     my $predicate = '';
     my @vars;
     if ($query) {
@@ -163,32 +170,29 @@ get '/fetch' => sub {
                 $query,
                 ($post ? '%' : ''),
             ;
-        } elsif ($field eq 'genre') {
+        } elsif ($field eq 'genre' or $field eq 'tag') {
             if ($query =~ /^\d+$/) {
-                $predicate = ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id WHERE g.genre_id = ?';
+                $predicate = sprintf ' INNER JOIN %s_xref x ON titles.title_id=x.title_id INNER JOIN %ss a ON x.%s_id=a.%s_id WHERE a.%s_id = ?', ($field) x 5;
                 push @vars, $query;
             } else {
-                $predicate = ' INNER JOIN genre_xref x ON titles.title_id=x.title_id INNER JOIN genres g ON x.genre_id=g.genre_id'
-                            . sprintf ' WHERE g.genre_name %s "%s%s%s"', 
+                $predicate = sprintf( ' INNER JOIN %s_xref x ON titles.title_id=x.title_id INNER JOIN %ss a ON x.%s_id=a.%s_id', ($field) x 4 )
+                            . sprintf ' WHERE a.%s %s "%s%s%s"', 
+                                $field eq 'genre' ? 'genre_name' : 'tag',
                                 ($pre || $post ? 'LIKE' : '='),
                                 ($pre  ? '%' : ''),
                                 $query,
                                 ($post ? '%' : ''),
                 ;
             }
-        } elsif ($field eq 'tag') {
-            if ($query =~ /^\d+$/) {
-                $predicate = ' INNER JOIN tag_xref x ON titles.title_id=x.title_id INNER JOIN tags t ON x.tag_id=t.tag_id WHERE t.tag_id = ?';
-                push @vars, $query;
-            } else {
-                $predicate = ' INNER JOIN tag_xref x ON titles.title_id=x.title_id INNER JOIN tags t ON x.tag_id=t.tag_id'
-                            . sprintf ' WHERE t.tag %s "%s%s%s"', 
-                                ($pre || $post ? 'LIKE' : '='),
-                                ($pre  ? '%' : ''),
-                                $query,
-                                ($post ? '%' : ''),
-                ;
-            }
+            $self->stash(
+                list        => render_select( $field ),
+                selected    => $query,
+                name        => 'query',
+                class       => 'form-control',
+                id          => '',
+                javascript  => '',
+            );
+            $select = $self->render_to_string( 'select' );
         } elsif ($field eq 'director') {
             if ($query =~ /^\d+$/) {
                 $predicate = ' INNER JOIN role_xref x ON titles.title_id=x.title_id INNER JOIN people p ON x.person_id=p.person_id WHERE x.role_id = 1 and p.person_id = ?';
@@ -266,6 +270,7 @@ get '/fetch' => sub {
             query  => $query,
             sql    => $sql,
             field  => $field,
+            select => $select,
             cloud  => \@cloud,
             DEBUG  => $DEBUG,
         );
@@ -374,6 +379,7 @@ get '/fetch' => sub {
         query  => $query,
         sql    => $sql,
         field  => $field,
+        select => $select,
         cloud  => \@cloud,
         DEBUG  => $DEBUG,
     );
@@ -750,7 +756,13 @@ __DATA__
       </label>
     </div>
 
-    <span id="querybox"><%= include input => query => $query %></span>
+    <span id="querybox">
+        <% if ($select) { %>
+            <%= $select %>
+        <% } else { %>
+            <%= include input => query => $query %>
+        <% } %>
+    </span>
 
     <div class="btn-group" data-toggle="buttons">
       <label id="post-button" onclick="javascript: toggle('post')" class="btn <%= $post ? 'btn-info active' : 'btn-link' %>">
