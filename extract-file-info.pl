@@ -144,6 +144,8 @@ extract-file-info - fetch IMDb page(s)
 
 ./extract-file-info --dir=/Volumes/MOVIES
 
+./list-recently-added-movies.pl --dir=/Volumes/TV/ --limit=19 | xargs -I {} ./extract-file-info.pl --file={} >> movies.json
+
  Options:
    --dir        path to find movies from 
    --help       show help
