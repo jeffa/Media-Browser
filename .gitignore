@@ -7,4 +7,5 @@ DUMP.sql
 nohup.out
 data/
 *.json
+*.sql
 movies.txt
