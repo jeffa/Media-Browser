@@ -16,7 +16,7 @@ GetOptions (
 
 pod2usage( -verbose => 0 ) if $help;
 pod2usage( -verbose => 2 ) if $man;
-pod2usage( 'dir must be valid path' ) unless $dir;
+pod2usage( 'dir must be valid path' ) unless $dir && -d $dir;
 $limit = 20 unless int($limit);
 
 my @sorted = sort { -M $a <=> -M $b } File::Find::Rule
